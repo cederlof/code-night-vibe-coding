@@ -1,7 +1,7 @@
 ## Intro
 I `./template` hittar du filstruktur att använda till ditt spel. Läs `./template/README.md` för mer information. Du kan med fördel klona ner detta repo och arbeta direkt i detta git-repo på din maskin enligt instruktioner nedan.
 
-I `./example` finns exempel på ett spel som skapades med denna metod, inklusive specifikationsfiler och promptar som använts. Snake!
+I `./example2` finns exempel på ett spel som skapades med denna metod, inklusive specifikationsfiler och promptar som använts. Maze Race! (Kör med `npx serve .`)
 
 ### 1. Klona repot
 ```bash
