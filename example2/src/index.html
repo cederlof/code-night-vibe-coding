@@ -34,6 +34,12 @@
             border: 3px solid #444;
             background: #1a1a1a;
             display: block;
+            position: relative;
+        }
+        
+        #renderCanvas {
+            display: block;
+            outline: none;
         }
 
         #hud {
@@ -142,7 +148,7 @@
                 <div class="hud-value" id="bestTime" style="color: #ff0;">--</div>
             </div>
         </div>
-        <canvas id="canvas" width="800" height="800"></canvas>
+        <div id="canvas"></div>
         <div id="controls">
             Arrow Keys: Drive | R: Restart
         </div>
@@ -157,6 +163,7 @@
         <button onclick="game.restart()">Restart (R)</button>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.min.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

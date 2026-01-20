@@ -14,6 +14,14 @@ const COLLISION_BOUNCE = 0.5;
 const COLLISION_SPEED_PENALTY = 0.4;
 const COLLISION_SLOWDOWN_DURATION = 400; // ms
 
+// 3D Rendering constants
+const CAR_HEIGHT = 10;
+const WALL_HEIGHT = CAR_HEIGHT * 3;
+const CAMERA_DISTANCE = 150;
+const CAMERA_HEIGHT = 80;
+const CAMERA_OFFSET = 20; // Side offset
+const CAMERA_SMOOTHING = 0.1;
+
 // Maze presets (0 = path, 1 = wall)
 const MAZES = {
     small: {
@@ -114,11 +122,235 @@ const MAZES = {
     }
 };
 
+// 3D Renderer using Three.js
+class Renderer3D {
+    constructor(container, maze) {
+        this.container = container;
+        this.maze = maze;
+        
+        // Setup Three.js scene
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x1a1a1a);
+        
+        // Setup camera
+        const size = maze.size * maze.cellSize;
+        this.camera = new THREE.PerspectiveCamera(
+            60,
+            size / size,
+            1,
+            2000
+        );
+        
+        // Setup renderer
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(size, size);
+        this.container.appendChild(this.renderer.domElement);
+        
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight.position.set(50, 100, 50);
+        this.scene.add(directionalLight);
+        
+        // Create maze geometry
+        this.createMaze();
+        
+        // Create car
+        this.createCar();
+        
+        // Create goal
+        this.createGoal();
+        
+        // Camera tracking
+        this.cameraTarget = new THREE.Vector3();
+        this.cameraPosition = new THREE.Vector3();
+    }
+    
+    createMaze() {
+        const cellSize = this.maze.cellSize;
+        const mazeSize = this.maze.size;
+        
+        // Create floor
+        const floorGeometry = new THREE.PlaneGeometry(
+            mazeSize * cellSize,
+            mazeSize * cellSize
+        );
+        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set(
+            (mazeSize * cellSize) / 2,
+            0,
+            (mazeSize * cellSize) / 2
+        );
+        this.scene.add(floor);
+        
+        // Create walls
+        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        
+        for (let y = 0; y < mazeSize; y++) {
+            for (let x = 0; x < mazeSize; x++) {
+                if (this.maze.layout[y][x] === 1) {
+                    const wallGeometry = new THREE.BoxGeometry(
+                        cellSize,
+                        WALL_HEIGHT,
+                        cellSize
+                    );
+                    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                    wall.position.set(
+                        x * cellSize + cellSize / 2,
+                        WALL_HEIGHT / 2,
+                        y * cellSize + cellSize / 2
+                    );
+                    this.scene.add(wall);
+                }
+            }
+        }
+    }
+    
+    createCar() {
+        const carGeometry = new THREE.BoxGeometry(20, CAR_HEIGHT, 15);
+        const carMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+        this.carMesh = new THREE.Mesh(carGeometry, carMaterial);
+        
+        // Car front indicator
+        const frontGeometry = new THREE.BoxGeometry(5, CAR_HEIGHT - 2, 8);
+        const frontMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+        const front = new THREE.Mesh(frontGeometry, frontMaterial);
+        front.position.set(12, 0, 0);
+        this.carMesh.add(front);
+        
+        this.carMesh.position.y = CAR_HEIGHT / 2;
+        this.scene.add(this.carMesh);
+    }
+    
+    createGoal() {
+        const goalX = this.maze.goal.x * this.maze.cellSize;
+        const goalZ = this.maze.goal.y * this.maze.cellSize;
+        const goalW = this.maze.goal.width * this.maze.cellSize;
+        const goalH = this.maze.goal.height * this.maze.cellSize;
+        
+        // Main goal platform
+        const goalGeometry = new THREE.BoxGeometry(goalW, 2, goalH);
+        const goalMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0x00ff00,
+            emissive: 0x00ff00,
+            emissiveIntensity: 0.3
+        });
+        this.goalMesh = new THREE.Mesh(goalGeometry, goalMaterial);
+        this.goalMesh.position.set(
+            goalX + goalW / 2,
+            1,
+            goalZ + goalH / 2
+        );
+        this.scene.add(this.goalMesh);
+        
+        // Goal marker (tall cylinder)
+        const markerGeometry = new THREE.CylinderGeometry(5, 5, 20, 8);
+        const markerMaterial = new THREE.MeshLambertMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.5
+        });
+        this.goalMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+        this.goalMarker.position.set(
+            goalX + goalW / 2,
+            10,
+            goalZ + goalH / 2
+        );
+        this.scene.add(this.goalMarker);
+    }
+    
+    updateCar(car) {
+        // Update car position (convert 2D to 3D)
+        this.carMesh.position.x = car.x;
+        this.carMesh.position.z = car.y;
+        
+        // Update car rotation
+        this.carMesh.rotation.y = -car.angle;
+    }
+    
+    updateCamera(car) {
+        // Calculate desired camera position (behind and above car, with offset)
+        const angle = car.angle;
+        const offsetX = Math.cos(angle - Math.PI / 2) * CAMERA_OFFSET;
+        const offsetZ = Math.sin(angle - Math.PI / 2) * CAMERA_OFFSET;
+        
+        const targetX = car.x - Math.cos(angle) * CAMERA_DISTANCE + offsetX;
+        const targetY = CAMERA_HEIGHT;
+        const targetZ = car.y - Math.sin(angle) * CAMERA_DISTANCE + offsetZ;
+        
+        // Smooth camera movement
+        this.cameraPosition.x += (targetX - this.cameraPosition.x) * CAMERA_SMOOTHING;
+        this.cameraPosition.y += (targetY - this.cameraPosition.y) * CAMERA_SMOOTHING;
+        this.cameraPosition.z += (targetZ - this.cameraPosition.z) * CAMERA_SMOOTHING;
+        
+        this.camera.position.copy(this.cameraPosition);
+        
+        // Look at car
+        this.cameraTarget.x += (car.x - this.cameraTarget.x) * CAMERA_SMOOTHING;
+        this.cameraTarget.y += (CAR_HEIGHT - this.cameraTarget.y) * CAMERA_SMOOTHING;
+        this.cameraTarget.z += (car.y - this.cameraTarget.z) * CAMERA_SMOOTHING;
+        
+        this.camera.lookAt(this.cameraTarget);
+    }
+    
+    animate(car) {
+        // Animate goal
+        const pulse = Math.sin(Date.now() / 200) * 0.2 + 0.8;
+        this.goalMesh.material.emissiveIntensity = pulse * 0.3;
+        this.goalMarker.material.emissiveIntensity = pulse * 0.5;
+        this.goalMarker.rotation.y += 0.02;
+    }
+    
+    render(car) {
+        this.updateCar(car);
+        this.updateCamera(car);
+        this.animate(car);
+        this.renderer.render(this.scene, this.camera);
+    }
+    
+    dispose() {
+        this.renderer.dispose();
+        if (this.renderer.domElement.parentNode) {
+            this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
+        }
+    }
+    
+    updateMaze(maze) {
+        // Clear old scene objects
+        while(this.scene.children.length > 0) { 
+            this.scene.remove(this.scene.children[0]); 
+        }
+        
+        // Re-add lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        directionalLight.position.set(50, 100, 50);
+        this.scene.add(directionalLight);
+        
+        // Update maze reference
+        this.maze = maze;
+        
+        // Recreate everything
+        this.createMaze();
+        this.createCar();
+        this.createGoal();
+        
+        // Update renderer size
+        const size = maze.size * maze.cellSize;
+        this.renderer.setSize(size, size);
+    }
+}
+
 // Game state
 class Game {
     constructor() {
-        this.canvas = document.getElementById('canvas');
-        this.ctx = this.canvas.getContext('2d');
+        this.container = document.getElementById('canvas');
         this.keys = {};
         this.currentMazeId = 'small';
         this.currentMaze = MAZES[this.currentMazeId];
@@ -130,7 +362,9 @@ class Game {
         this.bestTime = this.loadBestTime();
         this.collisionShake = { active: false, duration: 0, intensity: 0 };
         
-        this.updateCanvasSize();
+        // Setup 3D renderer
+        this.renderer3D = new Renderer3D(this.container, this.currentMaze);
+        
         this.setupInput();
         this.setupMazeSelector();
         this.restart();
@@ -139,9 +373,7 @@ class Game {
     }
 
     updateCanvasSize() {
-        const size = this.currentMaze.size * this.currentMaze.cellSize;
-        this.canvas.width = size;
-        this.canvas.height = size;
+        // No longer needed - handled by Renderer3D
     }
 
     setupMazeSelector() {
@@ -160,7 +392,7 @@ class Game {
     changeMaze(mazeId) {
         this.currentMazeId = mazeId;
         this.currentMaze = MAZES[mazeId];
-        this.updateCanvasSize();
+        this.renderer3D.updateMaze(this.currentMaze);
         this.bestTime = this.loadBestTime();
         this.updateBestTimeDisplay();
         this.restart();
@@ -388,98 +620,14 @@ class Game {
     }
 
     render() {
-        const canvasSize = this.currentMaze.size * this.currentMaze.cellSize;
+        // All rendering now handled by Renderer3D
+        this.renderer3D.render(this.car);
         
-        // Clear canvas
-        this.ctx.fillStyle = '#1a1a1a';
-        this.ctx.fillRect(0, 0, canvasSize, canvasSize);
-
-        // Apply shake effect
-        this.ctx.save();
-        if (this.collisionShake.active) {
-            const elapsed = Date.now() - this.collisionShake.startTime;
-            if (elapsed < this.collisionShake.duration) {
-                const progress = 1 - (elapsed / this.collisionShake.duration);
-                const shakeX = (Math.random() - 0.5) * this.collisionShake.intensity * progress;
-                const shakeY = (Math.random() - 0.5) * this.collisionShake.intensity * progress;
-                this.ctx.translate(shakeX, shakeY);
-            } else {
-                this.collisionShake.active = false;
-            }
-        }
-
-        // Draw maze
-        this.ctx.fillStyle = '#444';
-        for (let y = 0; y < this.currentMaze.size; y++) {
-            for (let x = 0; x < this.currentMaze.size; x++) {
-                if (this.currentMaze.layout[y][x] === 1) {
-                    this.ctx.fillRect(x * this.currentMaze.cellSize, y * this.currentMaze.cellSize, 
-                                     this.currentMaze.cellSize, this.currentMaze.cellSize);
-                }
-            }
-        }
-
-        // Draw grid lines (subtle)
-        this.ctx.strokeStyle = '#2a2a2a';
-        this.ctx.lineWidth = 1;
-        for (let i = 0; i <= this.currentMaze.size; i++) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(i * this.currentMaze.cellSize, 0);
-            this.ctx.lineTo(i * this.currentMaze.cellSize, canvasSize);
-            this.ctx.stroke();
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, i * this.currentMaze.cellSize);
-            this.ctx.lineTo(canvasSize, i * this.currentMaze.cellSize);
-            this.ctx.stroke();
-        }
-
-        // Draw goal with enhanced animation
-        const goalX = this.currentMaze.goal.x * this.currentMaze.cellSize;
-        const goalY = this.currentMaze.goal.y * this.currentMaze.cellSize;
-        const goalW = this.currentMaze.goal.width * this.currentMaze.cellSize;
-        const goalH = this.currentMaze.goal.height * this.currentMaze.cellSize;
-        
-        // Base goal
-        this.ctx.fillStyle = '#0f0';
-        this.ctx.fillRect(goalX, goalY, goalW, goalH);
-        
-        // Pulsing overlay
-        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
-        this.ctx.fillStyle = `rgba(0, 255, 0, ${pulse * 0.5})`;
-        this.ctx.fillRect(goalX, goalY, goalW, goalH);
-        
-        // Rotating corners
-        const cornerPulse = Math.sin(Date.now() / 150) * 0.5 + 0.5;
-        this.ctx.fillStyle = `rgba(255, 255, 0, ${cornerPulse})`;
-        const cornerSize = Math.min(goalW, goalH) * 0.2;
-        this.ctx.fillRect(goalX, goalY, cornerSize, cornerSize);
-        this.ctx.fillRect(goalX + goalW - cornerSize, goalY, cornerSize, cornerSize);
-        this.ctx.fillRect(goalX, goalY + goalH - cornerSize, cornerSize, cornerSize);
-        this.ctx.fillRect(goalX + goalW - cornerSize, goalY + goalH - cornerSize, cornerSize, cornerSize);
-
-        // Draw car
-        this.ctx.save();
-        this.ctx.translate(this.car.x, this.car.y);
-        this.ctx.rotate(this.car.angle);
-
-        // Car body
-        this.ctx.fillStyle = '#f00';
-        this.ctx.fillRect(-this.car.size, -this.car.size / 2, this.car.size * 2, this.car.size);
-
-        // Car front (direction indicator)
-        this.ctx.fillStyle = '#ff0';
-        this.ctx.fillRect(this.car.size * 0.8, -this.car.size / 4, this.car.size * 0.4, this.car.size / 2);
-
-        this.ctx.restore();
-
-        // Update HUD
+        // Update HUD (still 2D HTML overlay)
         document.getElementById('speedometer').textContent = 
             Math.round((this.car.speed / MAX_SPEED) * 100);
         document.getElementById('timer').textContent = 
             (this.timer / 1000).toFixed(2) + 's';
-        
-        // Restore shake transform
-        this.ctx.restore();
     }
 
     gameLoop() {
