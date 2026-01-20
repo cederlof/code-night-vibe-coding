@@ -141,18 +141,34 @@ class Renderer3D {
             2000
         );
         
-        // Setup renderer
+        // Setup renderer with shadows
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(size, size);
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
         
-        // Add lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Add lighting with shadows
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        directionalLight.position.set(50, 100, 50);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 150, 100);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -200;
+        directionalLight.shadow.camera.right = 200;
+        directionalLight.shadow.camera.top = 200;
+        directionalLight.shadow.camera.bottom = -200;
         this.scene.add(directionalLight);
+        this.directionalLight = directionalLight;
+        
+        // Add hemisphere light for better ambient lighting
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x3a3a3a, 0.4);
+        this.scene.add(hemisphereLight);
         
         // Create maze geometry
         this.createMaze();
@@ -172,12 +188,42 @@ class Renderer3D {
         const cellSize = this.maze.cellSize;
         const mazeSize = this.maze.size;
         
-        // Create floor
+        // Create floor with texture
         const floorGeometry = new THREE.PlaneGeometry(
             mazeSize * cellSize,
             mazeSize * cellSize
         );
-        const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+        const textureLoader = new THREE.TextureLoader();
+        
+        // Create procedural texture for floor
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#2a2a2a';
+        ctx.fillRect(0, 0, 512, 512);
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 512; i += 64) {
+            ctx.beginPath();
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, 512);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, i);
+            ctx.lineTo(512, i);
+            ctx.stroke();
+        }
+        const floorTexture = new THREE.CanvasTexture(canvas);
+        floorTexture.wrapS = THREE.RepeatWrapping;
+        floorTexture.wrapT = THREE.RepeatWrapping;
+        floorTexture.repeat.set(mazeSize, mazeSize);
+        
+        const floorMaterial = new THREE.MeshStandardMaterial({ 
+            map: floorTexture,
+            roughness: 0.8,
+            metalness: 0.2
+        });
         const floor = new THREE.Mesh(floorGeometry, floorMaterial);
         floor.rotation.x = -Math.PI / 2;
         floor.position.set(
@@ -185,10 +231,34 @@ class Renderer3D {
             0,
             (mazeSize * cellSize) / 2
         );
+        floor.receiveShadow = true;
         this.scene.add(floor);
         
-        // Create walls
-        const wallMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+        // Create walls with texture
+        const wallCanvas = document.createElement('canvas');
+        wallCanvas.width = 256;
+        wallCanvas.height = 256;
+        const wallCtx = wallCanvas.getContext('2d');
+        wallCtx.fillStyle = '#333333';
+        wallCtx.fillRect(0, 0, 256, 256);
+        // Add brick-like pattern
+        wallCtx.strokeStyle = '#222222';
+        wallCtx.lineWidth = 2;
+        for (let y = 0; y < 256; y += 32) {
+            for (let x = 0; x < 256; x += 64) {
+                const offsetX = (y / 32) % 2 === 0 ? 0 : 32;
+                wallCtx.strokeRect(x + offsetX, y, 64, 32);
+            }
+        }
+        const wallTexture = new THREE.CanvasTexture(wallCanvas);
+        wallTexture.wrapS = THREE.RepeatWrapping;
+        wallTexture.wrapT = THREE.RepeatWrapping;
+        
+        const wallMaterial = new THREE.MeshStandardMaterial({ 
+            map: wallTexture,
+            roughness: 0.9,
+            metalness: 0.1
+        });
         
         for (let y = 0; y < mazeSize; y++) {
             for (let x = 0; x < mazeSize; x++) {
@@ -204,6 +274,8 @@ class Renderer3D {
                         WALL_HEIGHT / 2,
                         y * cellSize + cellSize / 2
                     );
+                    wall.castShadow = true;
+                    wall.receiveShadow = true;
                     this.scene.add(wall);
                 }
             }
@@ -211,16 +283,87 @@ class Renderer3D {
     }
     
     createCar() {
-        const carGeometry = new THREE.BoxGeometry(20, CAR_HEIGHT, 15);
-        const carMaterial = new THREE.MeshLambertMaterial({ color: 0xff0000 });
-        this.carMesh = new THREE.Mesh(carGeometry, carMaterial);
+        // Create car group
+        this.carMesh = new THREE.Group();
         
-        // Car front indicator
-        const frontGeometry = new THREE.BoxGeometry(5, CAR_HEIGHT - 2, 8);
-        const frontMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+        // Main car body
+        const bodyGeometry = new THREE.BoxGeometry(20, CAR_HEIGHT, 15);
+        const bodyMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xff0000,
+            roughness: 0.4,
+            metalness: 0.6
+        });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.castShadow = true;
+        body.receiveShadow = true;
+        this.carMesh.add(body);
+        
+        // Car roof/cabin (smaller box on top)
+        const roofGeometry = new THREE.BoxGeometry(12, CAR_HEIGHT * 0.6, 10);
+        const roofMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xcc0000,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+        const roof = new THREE.Mesh(roofGeometry, roofMaterial);
+        roof.position.set(-2, CAR_HEIGHT * 0.5, 0);
+        roof.castShadow = true;
+        this.carMesh.add(roof);
+        
+        // Front bumper/indicator
+        const frontGeometry = new THREE.BoxGeometry(5, CAR_HEIGHT - 2, 12);
+        const frontMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.3,
+            roughness: 0.5,
+            metalness: 0.5
+        });
         const front = new THREE.Mesh(frontGeometry, frontMaterial);
         front.position.set(12, 0, 0);
+        front.castShadow = true;
         this.carMesh.add(front);
+        
+        // Wheels
+        const wheelGeometry = new THREE.CylinderGeometry(3, 3, 3, 16);
+        const wheelMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x111111,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        
+        const wheelPositions = [
+            [7, -CAR_HEIGHT/2 + 1.5, 8],
+            [7, -CAR_HEIGHT/2 + 1.5, -8],
+            [-7, -CAR_HEIGHT/2 + 1.5, 8],
+            [-7, -CAR_HEIGHT/2 + 1.5, -8]
+        ];
+        
+        this.wheels = [];
+        wheelPositions.forEach(pos => {
+            const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position.set(pos[0], pos[1], pos[2]);
+            wheel.castShadow = true;
+            this.carMesh.add(wheel);
+            this.wheels.push(wheel);
+        });
+        
+        // Headlights
+        const headlightGeometry = new THREE.SphereGeometry(1.5, 8, 8);
+        const headlightMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffffdd,
+            emissive: 0xffffdd,
+            emissiveIntensity: 0.8
+        });
+        
+        const headlight1 = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        headlight1.position.set(11, 1, 4);
+        this.carMesh.add(headlight1);
+        
+        const headlight2 = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        headlight2.position.set(11, 1, -4);
+        this.carMesh.add(headlight2);
         
         this.carMesh.position.y = CAR_HEIGHT / 2;
         this.scene.add(this.carMesh);
@@ -234,10 +377,12 @@ class Renderer3D {
         
         // Main goal platform
         const goalGeometry = new THREE.BoxGeometry(goalW, 2, goalH);
-        const goalMaterial = new THREE.MeshLambertMaterial({ 
+        const goalMaterial = new THREE.MeshStandardMaterial({ 
             color: 0x00ff00,
             emissive: 0x00ff00,
-            emissiveIntensity: 0.3
+            emissiveIntensity: 0.4,
+            roughness: 0.3,
+            metalness: 0.7
         });
         this.goalMesh = new THREE.Mesh(goalGeometry, goalMaterial);
         this.goalMesh.position.set(
@@ -245,14 +390,18 @@ class Renderer3D {
             1,
             goalZ + goalH / 2
         );
+        this.goalMesh.castShadow = true;
+        this.goalMesh.receiveShadow = true;
         this.scene.add(this.goalMesh);
         
         // Goal marker (tall cylinder)
         const markerGeometry = new THREE.CylinderGeometry(5, 5, 20, 8);
-        const markerMaterial = new THREE.MeshLambertMaterial({ 
+        const markerMaterial = new THREE.MeshStandardMaterial({ 
             color: 0xffff00,
             emissive: 0xffff00,
-            emissiveIntensity: 0.5
+            emissiveIntensity: 0.6,
+            roughness: 0.2,
+            metalness: 0.8
         });
         this.goalMarker = new THREE.Mesh(markerGeometry, markerMaterial);
         this.goalMarker.position.set(
@@ -260,6 +409,7 @@ class Renderer3D {
             10,
             goalZ + goalH / 2
         );
+        this.goalMarker.castShadow = true;
         this.scene.add(this.goalMarker);
     }
     
@@ -300,9 +450,26 @@ class Renderer3D {
     animate(car) {
         // Animate goal
         const pulse = Math.sin(Date.now() / 200) * 0.2 + 0.8;
-        this.goalMesh.material.emissiveIntensity = pulse * 0.3;
-        this.goalMarker.material.emissiveIntensity = pulse * 0.5;
+        this.goalMesh.material.emissiveIntensity = pulse * 0.4;
+        this.goalMarker.material.emissiveIntensity = pulse * 0.6;
         this.goalMarker.rotation.y += 0.02;
+        
+        // Rotate wheels based on car speed
+        if (this.wheels) {
+            const wheelRotation = car.speed * 0.1;
+            this.wheels.forEach(wheel => {
+                wheel.rotation.x += wheelRotation;
+            });
+        }
+        
+        // Update directional light to follow car for better shadows
+        this.directionalLight.position.set(
+            car.x + 100,
+            150,
+            car.y + 100
+        );
+        this.directionalLight.target.position.set(car.x, 0, car.y);
+        this.directionalLight.target.updateMatrixWorld();
     }
     
     render(car) {
@@ -325,13 +492,26 @@ class Renderer3D {
             this.scene.remove(this.scene.children[0]); 
         }
         
-        // Re-add lights
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Re-add lights with shadows
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        directionalLight.position.set(50, 100, 50);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(100, 150, 100);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -200;
+        directionalLight.shadow.camera.right = 200;
+        directionalLight.shadow.camera.top = 200;
+        directionalLight.shadow.camera.bottom = -200;
         this.scene.add(directionalLight);
+        this.directionalLight = directionalLight;
+        
+        const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x3a3a3a, 0.4);
+        this.scene.add(hemisphereLight);
         
         // Update maze reference
         this.maze = maze;

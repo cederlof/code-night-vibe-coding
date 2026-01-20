@@ -43,7 +43,7 @@
 
 ---
 
-## M4: 3D Rendering (In Progress)
+## M4: 3D Rendering ✅
 **Goal:** Convert 2D top-down view to immersive 3D third-person perspective
 
 - Integrate Three.js via CDN
@@ -64,11 +64,15 @@
 
 ---
 
-## M5: 3D Polish (Future)
+## M5: 3D Polish ✅
 **Goal:** Enhanced visuals while maintaining performance
 
-- Add shadows
-- Add textures to walls/floor
-- Improve car model detail
-- Particle effects for collisions
-- Environmental details (lighting improvements)
+- ✅ Add dynamic shadows (PCF soft shadows, 2048x2048 shadow maps)
+- ✅ Add procedural textures to walls (brick pattern) and floor (grid pattern)
+- ✅ Improve car model detail (roof, wheels, headlights)
+- ✅ Wheel rotation animation based on car speed
+- ✅ Enhanced lighting (hemisphere light, dynamic shadow following)
+- ✅ Upgraded materials to PBR (MeshStandardMaterial with roughness/metalness)
+- ✅ Improved goal visuals with better emission
+
+**Done when:** Game has polished 3D visuals with shadows, textures, and detailed car model.
