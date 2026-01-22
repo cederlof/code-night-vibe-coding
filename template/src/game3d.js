@@ -398,13 +398,100 @@ function createObstacle() {
 }
 
 function createFinishLine(scene, x) {
-    const geometry = new THREE.BoxGeometry(config.track.width, 5, 0.5);
-    const material = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
-    const finishLine = new THREE.Mesh(geometry, material);
-    finishLine.position.set(0, 2.5, config.track.length);
-    finishLine.castShadow = true;
-    finishLine.receiveShadow = true;
-    scene.add(finishLine);
+    const group = new THREE.Group();
+    
+    // Create checkered finish line on ground
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    
+    const squareSize = 32;
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 2; j++) {
+            ctx.fillStyle = (i + j) % 2 === 0 ? '#000000' : '#ffffff';
+            ctx.fillRect(i * squareSize, j * squareSize, squareSize, squareSize);
+        }
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    const lineGeometry = new THREE.PlaneGeometry(config.track.width, 2);
+    const lineMaterial = new THREE.MeshStandardMaterial({ 
+        map: texture,
+        roughness: 0.8,
+        metalness: 0.1
+    });
+    const line = new THREE.Mesh(lineGeometry, lineMaterial);
+    line.rotation.x = -Math.PI / 2;
+    line.position.set(0, 0.01, config.track.length);
+    line.receiveShadow = true;
+    group.add(line);
+    
+    // Create finish arch
+    const archHeight = 6;
+    const archWidth = config.track.width + 2;
+    
+    // Left pillar
+    const pillarGeometry = new THREE.BoxGeometry(0.8, archHeight, 0.8);
+    const pillarMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xe74c3c,
+        roughness: 0.5,
+        metalness: 0.3
+    });
+    const leftPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+    leftPillar.position.set(-archWidth / 2, archHeight / 2, config.track.length);
+    leftPillar.castShadow = true;
+    leftPillar.receiveShadow = true;
+    group.add(leftPillar);
+    
+    // Right pillar
+    const rightPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+    rightPillar.position.set(archWidth / 2, archHeight / 2, config.track.length);
+    rightPillar.castShadow = true;
+    rightPillar.receiveShadow = true;
+    group.add(rightPillar);
+    
+    // Top bar
+    const barGeometry = new THREE.BoxGeometry(archWidth, 0.6, 0.8);
+    const barMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xf39c12,
+        roughness: 0.4,
+        metalness: 0.5,
+        emissive: 0xf39c12,
+        emissiveIntensity: 0.3
+    });
+    const bar = new THREE.Mesh(barGeometry, barMaterial);
+    bar.position.set(0, archHeight - 0.3, config.track.length);
+    bar.castShadow = true;
+    bar.receiveShadow = true;
+    group.add(bar);
+    
+    // Finish banner
+    const bannerCanvas = document.createElement('canvas');
+    bannerCanvas.width = 512;
+    bannerCanvas.height = 128;
+    const bannerCtx = bannerCanvas.getContext('2d');
+    bannerCtx.fillStyle = '#2c3e50';
+    bannerCtx.fillRect(0, 0, 512, 128);
+    bannerCtx.fillStyle = '#ffffff';
+    bannerCtx.font = 'bold 60px Arial';
+    bannerCtx.textAlign = 'center';
+    bannerCtx.fillText('FINISH', 256, 80);
+    
+    const bannerTexture = new THREE.CanvasTexture(bannerCanvas);
+    const bannerGeometry = new THREE.PlaneGeometry(archWidth - 2, 1.2);
+    const bannerMaterial = new THREE.MeshStandardMaterial({ 
+        map: bannerTexture,
+        roughness: 0.7,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+    });
+    const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
+    banner.position.set(0, archHeight - 1.5, config.track.length);
+    banner.receiveShadow = true;
+    group.add(banner);
+    
+    scene.add(group);
 }
 
 function createBarriers(scene) {
@@ -493,7 +580,8 @@ function createTree() {
     const trunkMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x6d4c41,
         roughness: 0.95,
-        metalness: 0.0
+        metalness: 0.0,
+        side: THREE.DoubleSide
     });
     const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
     trunk.position.y = 1;
@@ -505,22 +593,23 @@ function createTree() {
     const foliageMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x2ecc71,
         roughness: 0.85,
-        metalness: 0.0
+        metalness: 0.0,
+        side: THREE.DoubleSide
     });
     
-    const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 10), foliageMaterial);
+    const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 12), foliageMaterial);
     foliage1.position.y = 2.5;
     foliage1.castShadow = true;
     foliage1.receiveShadow = true;
     group.add(foliage1);
     
-    const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 10), foliageMaterial);
+    const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 12), foliageMaterial);
     foliage2.position.y = 3.5;
     foliage2.castShadow = true;
     foliage2.receiveShadow = true;
     group.add(foliage2);
     
-    const foliage3 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 10), foliageMaterial);
+    const foliage3 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 12), foliageMaterial);
     foliage3.position.y = 4.3;
     foliage3.castShadow = true;
     foliage3.receiveShadow = true;
