@@ -110,6 +110,8 @@ function init3D() {
     renderer.autoClear = false;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
     
     // Create 2D canvas overlay for UI
@@ -122,12 +124,14 @@ function init3D() {
     container.appendChild(uiCanvas);
     uiCtx = uiCanvas.getContext('2d');
     
-    // Create scenes for both players
+    // Create scenes for both players with gradient sky
     scene1 = new THREE.Scene();
     scene1.background = new THREE.Color(0x87CEEB);
+    scene1.fog = new THREE.Fog(0x87CEEB, 50, 120);
     
     scene2 = new THREE.Scene();
     scene2.background = new THREE.Color(0x87CEEB);
+    scene2.fog = new THREE.Fog(0x87CEEB, 50, 120);
     
     // Create cameras
     camera1 = new THREE.PerspectiveCamera(75, 600 / 500, 0.1, 1000);
@@ -168,29 +172,43 @@ function init3D() {
     // Create side barriers
     createBarriers(scene1);
     createBarriers(scene2);
+    
+    // Create landscaping
+    createLandscaping(scene1);
+    createLandscaping(scene2);
 }
 
 function addLights(scene) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    directionalLight.position.set(10, 20, 5);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    directionalLight.position.set(15, 30, 10);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
     directionalLight.shadow.mapSize.height = 2048;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.camera.left = -20;
+    directionalLight.shadow.camera.right = 20;
+    directionalLight.shadow.camera.top = 20;
+    directionalLight.shadow.camera.bottom = -20;
     scene.add(directionalLight);
     
+    // Hemisphere light for more natural lighting
+    const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x808080, 0.3);
+    scene.add(hemiLight);
+    
     // Spotlight following player
-    const spotlight = new THREE.SpotLight(0xffffff, 0.5);
-    spotlight.position.set(0, 10, 0);
-    spotlight.angle = Math.PI / 6;
-    spotlight.penumbra = 0.3;
-    spotlight.decay = 2;
-    spotlight.distance = 50;
+    const spotlight = new THREE.SpotLight(0xffffff, 0.6);
+    spotlight.position.set(0, 12, 0);
+    spotlight.angle = Math.PI / 5;
+    spotlight.penumbra = 0.4;
+    spotlight.decay = 1.5;
+    spotlight.distance = 60;
     spotlight.castShadow = true;
+    spotlight.shadow.mapSize.width = 1024;
+    spotlight.shadow.mapSize.height = 1024;
     scene.add(spotlight);
     scene.userData.spotlight = spotlight;
 }
@@ -198,37 +216,62 @@ function addLights(scene) {
 function createGround() {
     const geometry = new THREE.PlaneGeometry(config.track.width, config.track.length);
     
-    // Create texture using canvas
+    // Create more detailed texture using canvas
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 512;
+    canvas.width = 1024;
+    canvas.height = 1024;
     const ctx = canvas.getContext('2d');
     
-    // Base color
-    ctx.fillStyle = '#7f8c8d';
-    ctx.fillRect(0, 0, 512, 512);
+    // Base track color with gradient
+    const gradient = ctx.createLinearGradient(0, 0, 1024, 1024);
+    gradient.addColorStop(0, '#5a6268');
+    gradient.addColorStop(0.5, '#6c757d');
+    gradient.addColorStop(1, '#5a6268');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 1024, 1024);
     
-    // Grid lines
-    ctx.strokeStyle = '#95a5a6';
-    ctx.lineWidth = 2;
-    const gridSize = 64;
-    for (let i = 0; i <= 512; i += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, 512);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(512, i);
-        ctx.stroke();
+    // Add texture noise for asphalt effect
+    for (let i = 0; i < 5000; i++) {
+        const x = Math.random() * 1024;
+        const y = Math.random() * 1024;
+        const size = Math.random() * 2;
+        const alpha = Math.random() * 0.3;
+        ctx.fillStyle = `rgba(${Math.random() * 50}, ${Math.random() * 50}, ${Math.random() * 50}, ${alpha})`;
+        ctx.fillRect(x, y, size, size);
     }
+    
+    // Lane markings
+    ctx.strokeStyle = '#f8f9fa';
+    ctx.lineWidth = 8;
+    ctx.setLineDash([40, 30]);
+    ctx.beginPath();
+    ctx.moveTo(512, 0);
+    ctx.lineTo(512, 1024);
+    ctx.stroke();
+    
+    // Side lines
+    ctx.setLineDash([]);
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = '#ffc107';
+    ctx.beginPath();
+    ctx.moveTo(100, 0);
+    ctx.lineTo(100, 1024);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(924, 0);
+    ctx.lineTo(924, 1024);
+    ctx.stroke();
     
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
     texture.repeat.set(2, 10);
     
-    const material = new THREE.MeshLambertMaterial({ map: texture });
+    const material = new THREE.MeshStandardMaterial({ 
+        map: texture,
+        roughness: 0.9,
+        metalness: 0.1
+    });
     const ground = new THREE.Mesh(geometry, material);
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = config.track.length / 2;
@@ -237,16 +280,47 @@ function createGround() {
 }
 
 function createPlayer(color) {
-    const geometry = new THREE.BoxGeometry(
-        config.runner.width,
-        config.runner.height,
-        config.runner.depth
-    );
-    const material = new THREE.MeshLambertMaterial({ color });
-    const player = new THREE.Mesh(geometry, material);
-    player.castShadow = true;
-    player.receiveShadow = true;
-    return player;
+    const group = new THREE.Group();
+    
+    // Body (cylinder)
+    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
+        roughness: 0.6,
+        metalness: 0.2
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.6;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    group.add(body);
+    
+    // Head
+    const headGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const headMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffdbac,
+        roughness: 0.8,
+        metalness: 0.0
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 1.5;
+    head.castShadow = true;
+    head.receiveShadow = true;
+    group.add(head);
+    
+    // Helmet/visor
+    const visorGeometry = new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const visorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2c3e50,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
+    visor.position.y = 1.5;
+    visor.castShadow = true;
+    group.add(visor);
+    
+    return group;
 }
 
 function generateRandomObstaclePositions() {
@@ -292,16 +366,34 @@ function createObstacles() {
 }
 
 function createObstacle() {
+    const colors = [0xe74c3c, 0xe67e22, 0xf39c12, 0xc0392b];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    
     const geometry = new THREE.BoxGeometry(
         config.obstacle.width,
         config.obstacle.height,
         config.obstacle.depth
     );
-    const material = new THREE.MeshLambertMaterial({ color: 0xe67e22 });
+    
+    const material = new THREE.MeshStandardMaterial({ 
+        color: color,
+        roughness: 0.7,
+        metalness: 0.3,
+        emissive: color,
+        emissiveIntensity: 0.2
+    });
+    
     const obstacle = new THREE.Mesh(geometry, material);
     obstacle.castShadow = true;
     obstacle.receiveShadow = true;
     obstacle.userData.rotationSpeed = (Math.random() - 0.5) * 0.02;
+    
+    // Add edge glow
+    const edges = new THREE.EdgesGeometry(geometry);
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+    const wireframe = new THREE.LineSegments(edges, lineMaterial);
+    obstacle.add(wireframe);
+    
     return obstacle;
 }
 
@@ -319,7 +411,13 @@ function createBarriers(scene) {
     const barrierHeight = 3;
     const barrierThickness = 0.3;
     const geometry = new THREE.BoxGeometry(barrierThickness, barrierHeight, config.track.length);
-    const material = new THREE.MeshLambertMaterial({ color: 0x34495e, transparent: true, opacity: 0.6 });
+    const material = new THREE.MeshStandardMaterial({ 
+        color: 0xecf0f1,
+        roughness: 0.5,
+        metalness: 0.5,
+        transparent: true,
+        opacity: 0.7
+    });
     
     // Left barrier
     const leftBarrier = new THREE.Mesh(geometry, material);
@@ -334,6 +432,101 @@ function createBarriers(scene) {
     rightBarrier.castShadow = true;
     rightBarrier.receiveShadow = true;
     scene.add(rightBarrier);
+}
+
+function createLandscaping(scene) {
+    const spacing = 8; // Distance between landscape objects
+    const sideDistance = config.track.width / 2 + 2; // Position outside barriers
+    
+    for (let z = 0; z < config.track.length; z += spacing) {
+        // Randomly choose bush or tree for variety
+        const isBush = Math.random() > 0.5;
+        
+        // Left side
+        const leftLandscape = isBush ? createBush() : createTree();
+        leftLandscape.position.set(-sideDistance - Math.random() * 2, 0, z + Math.random() * 3);
+        leftLandscape.rotation.y = Math.random() * Math.PI * 2;
+        scene.add(leftLandscape);
+        
+        // Right side
+        const rightLandscape = isBush ? createBush() : createTree();
+        rightLandscape.position.set(sideDistance + Math.random() * 2, 0, z + Math.random() * 3);
+        rightLandscape.rotation.y = Math.random() * Math.PI * 2;
+        scene.add(rightLandscape);
+    }
+}
+
+function createBush() {
+    const group = new THREE.Group();
+    
+    // Bush base (sphere)
+    const bushGeometry = new THREE.SphereGeometry(0.8, 12, 12);
+    const bushMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x27ae60,
+        roughness: 0.9,
+        metalness: 0.0
+    });
+    const bush = new THREE.Mesh(bushGeometry, bushMaterial);
+    bush.position.y = 0.6;
+    bush.scale.y = 0.7;
+    bush.castShadow = true;
+    bush.receiveShadow = true;
+    group.add(bush);
+    
+    // Add smaller accent bushes
+    const accent1 = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x229954, roughness: 0.9 })
+    );
+    accent1.position.set(0.5, 0.5, 0.3);
+    accent1.castShadow = true;
+    group.add(accent1);
+    
+    return group;
+}
+
+function createTree() {
+    const group = new THREE.Group();
+    
+    // Tree trunk
+    const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.25, 2, 12);
+    const trunkMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x6d4c41,
+        roughness: 0.95,
+        metalness: 0.0
+    });
+    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+    trunk.position.y = 1;
+    trunk.castShadow = true;
+    trunk.receiveShadow = true;
+    group.add(trunk);
+    
+    // Tree foliage (layered cones)
+    const foliageMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2ecc71,
+        roughness: 0.85,
+        metalness: 0.0
+    });
+    
+    const foliage1 = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 10), foliageMaterial);
+    foliage1.position.y = 2.5;
+    foliage1.castShadow = true;
+    foliage1.receiveShadow = true;
+    group.add(foliage1);
+    
+    const foliage2 = new THREE.Mesh(new THREE.ConeGeometry(0.8, 1.5, 10), foliageMaterial);
+    foliage2.position.y = 3.5;
+    foliage2.castShadow = true;
+    foliage2.receiveShadow = true;
+    group.add(foliage2);
+    
+    const foliage3 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.2, 10), foliageMaterial);
+    foliage3.position.y = 4.3;
+    foliage3.castShadow = true;
+    foliage3.receiveShadow = true;
+    group.add(foliage3);
+    
+    return group;
 }
 
 // Sound effects using Web Audio API
