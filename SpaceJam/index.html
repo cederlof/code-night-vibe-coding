@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galactic Highway Crossing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+        }
+
+        #gameContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #ui {
+            width: 1000px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #111;
+            border: 2px solid #333;
+        }
+
+        #timerBar {
+            flex: 1;
+            height: 20px;
+            background: #222;
+            border: 1px solid #555;
+            margin: 0 10px;
+            position: relative;
+        }
+
+        #timerFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            transition: width 0.1s linear;
+        }
+
+        #stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            background: #0a0a1a;
+        }
+
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #fff;
+            text-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff;
+            pointer-events: none;
+            display: none;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 3px solid #ff0000;
+            text-align: center;
+            display: none;
+        }
+
+        #gameOver h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ff0000;
+        }
+
+        #gameOver button {
+            margin-top: 20px;
+            padding: 10px 30px;
+            font-size: 18px;
+            background: #333;
+            color: #fff;
+            border: 2px solid #666;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        #gameOver button:hover {
+            background: #555;
+        }
+
+        #mode3DBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            background: #333;
+            color: #0ff;
+            border: 2px solid #0ff;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            z-index: 100;
+        }
+
+        #mode3DBtn:hover {
+            background: #0ff;
+            color: #000;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <button id="mode3DBtn">Switch to 3D Mode</button>
+    <div id="gameContainer">
+        <div id="ui">
+            <div id="stats">
+                <div>Level: <span id="levelDisplay">1</span></div>
+                <div>Lives: <span id="livesDisplay">3</span></div>
+                <div>Score: <span id="scoreDisplay">0</span></div>
+            </div>
+            <div id="timerBar">
+                <div id="timerFill"></div>
+            </div>
+            <div id="stats">
+                <div>Time: <span id="timeDisplay">60</span>s</div>
+            </div>
+        </div>
+        <div style="position: relative;">
+            <canvas id="gameCanvas" width="1000" height="800"></canvas>
+            <div id="message"></div>
+            <div id="gameOver">
+                <h2>GAME OVER</h2>
+                <div>Final Score: <span id="finalScore">0</span></div>
+                <button onclick="location.reload()">Restart</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
