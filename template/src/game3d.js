@@ -8,7 +8,8 @@ const config = {
         maxSpeed: 0.5,
         acceleration: 0.03,
         speedDecay: 0.002,
-        strafeSpeed: 0.1,
+        strafeStep: 1.5,
+        strafeSpeed: 0.15,
         jumpStrength: 0.3,
         gravity: 0.015
     },
@@ -251,6 +252,7 @@ function startGame() {
     game.player1.z = 0;
     game.player1.y = 0;
     game.player1.x = 0;
+    game.player1.targetX = 0;
     game.player1.velocityY = 0;
     game.player1.speed = 0;
     game.player1.lastMoveTime = 0;
@@ -266,6 +268,7 @@ function startGame() {
     game.player2.z = 0;
     game.player2.y = 0;
     game.player2.x = 0;
+    game.player2.targetX = 0;
     game.player2.velocityY = 0;
     game.player2.speed = 0;
     game.player2.lastMoveTime = 0;
@@ -282,20 +285,20 @@ function startGame() {
 
 function handleKeyPress(event) {
     if (game.isRunning) {
-        // Player 1 controls: W = forward, A = strafe left, D = strafe right
+        // Player 1 controls: W = forward, D = strafe left, A = strafe right
         if (event.code === 'KeyW') {
             acceleratePlayer(game.player1);
-        } else if (event.code === 'KeyA') {
-            strafePlayer(game.player1, -1);
         } else if (event.code === 'KeyD') {
+            strafePlayer(game.player1, -1);
+        } else if (event.code === 'KeyA') {
             strafePlayer(game.player1, 1);
         }
-        // Player 2 controls: Numpad 8 = forward, Numpad 4 = strafe left, Numpad 6 = strafe right
+        // Player 2 controls: Numpad 8 = forward, Numpad 6 = strafe left, Numpad 4 = strafe right
         else if (event.code === 'Numpad8') {
             acceleratePlayer(game.player2);
-        } else if (event.code === 'Numpad4') {
-            strafePlayer(game.player2, -1);
         } else if (event.code === 'Numpad6') {
+            strafePlayer(game.player2, -1);
+        } else if (event.code === 'Numpad4') {
             strafePlayer(game.player2, 1);
         }
     } else if (event.code === 'KeyR') {
@@ -325,11 +328,11 @@ function acceleratePlayer(player) {
 
 function strafePlayer(player, direction) {
     // direction: -1 for left, 1 for right
-    const newX = player.x + (direction * config.runner.strafeSpeed);
+    const newTargetX = player.targetX + (direction * config.runner.strafeStep);
     
     // Apply lane boundaries
-    if (Math.abs(newX) <= config.track.strafeLimit) {
-        player.x = newX;
+    if (Math.abs(newTargetX) <= config.track.strafeLimit) {
+        player.targetX = newTargetX;
     }
 }
 
@@ -360,6 +363,14 @@ function updatePlayer(player) {
     
     // Move player forward (in Z direction)
     player.z += player.speed;
+    
+    // Smooth strafe interpolation (lerp towards target)
+    const xDiff = player.targetX - player.x;
+    if (Math.abs(xDiff) > 0.01) {
+        player.x += xDiff * config.runner.strafeSpeed;
+    } else {
+        player.x = player.targetX;
+    }
     
     // Apply gravity
     player.velocityY -= config.runner.gravity;

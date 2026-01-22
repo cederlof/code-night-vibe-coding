@@ -16,7 +16,8 @@
 - Speed increases with faster key presses
 - Speed decreases with slower key presses or no presses
 - Speed gradually decays when not pressing movement keys
-- Players can strafe left/right using A/D (P1) or Numpad 4/6 (P2)
+- Players can strafe left/right using D/A (P1) or Numpad 6/4 (P2)
+- Strafing uses smooth animated transitions
 - Strafing allows dodging obstacles sideways
 - Lane boundaries prevent moving outside track
 - Course layout is fixed (same every run)

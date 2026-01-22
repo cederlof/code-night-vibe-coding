@@ -120,15 +120,17 @@
 
 - Player 1 controls:
   - W key for forward movement/speed
-  - A key for strafing left
-  - D key for strafing right
+  - D key for strafing left
+  - A key for strafing right
 - Player 2 controls:
   - Numpad 8 for forward movement/speed
-  - Numpad 4 for strafing left
-  - Numpad 6 for strafing right
+  - Numpad 6 for strafing left
+  - Numpad 4 for strafing right
 - Strafing mechanics:
   - Players can move left/right within their lane
-  - Smooth horizontal movement
+  - Smooth animated transitions between positions
+  - Larger discrete steps (like changing lanes)
+  - Car-like smooth movement feel
   - Lane boundaries prevent moving too far left/right
   - Strafing allows dodging obstacles sideways
   - Maintain forward momentum while strafing
