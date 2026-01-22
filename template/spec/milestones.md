@@ -140,7 +140,29 @@
 
 ---
 
-## M8: Visual & Audio Polish
+## M8: Random Obstacle Course Generation
+**Goal**: Dynamically generated obstacle courses for variety
+
+- Procedurally generate obstacle positions each race
+- Obstacles placed at random X positions:
+  - Left lane position
+  - Center lane position
+  - Right lane position
+- Obstacles placed at varied Z distances along track
+- Minimum spacing between obstacles (ensure dodging is possible)
+  - At least 8-10 units between consecutive obstacles
+  - Prevents impossible-to-avoid patterns
+- Random number of obstacles per race (5-10)
+- Same random course generated for both players (fair racing)
+- New random course on each restart
+- Obstacles stay within track boundaries
+- Visual variety in obstacle placement
+
+**Playable**: Each race feels unique with different obstacle patterns
+
+---
+
+## M9: Visual & Audio Polish
 **Goal**: Smooth and satisfying feel
 
 - Smooth running animation (minimal but fluid)
@@ -153,7 +175,7 @@
 
 ---
 
-## M9: Leaderboard
+## M10: Leaderboard
 **Goal**: Competition with others
 
 - Leaderboard displays top times

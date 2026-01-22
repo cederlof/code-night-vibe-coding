@@ -23,7 +23,10 @@ const config = {
         width: 1.5,
         height: 1.5,
         depth: 1.5,
-        spacing: 15
+        minSpacing: 8,
+        minCount: 5,
+        maxCount: 10,
+        lanePositions: [-1.5, 0, 1.5]
     },
     pauseDuration: 0.75
 };
@@ -183,19 +186,43 @@ function createPlayer(color) {
     return new THREE.Mesh(geometry, material);
 }
 
-function createObstacles() {
-    const obstaclePositions = [20, 35, 50, 65, 80];
+function generateRandomObstaclePositions() {
+    const positions = [];
+    const obstacleCount = Math.floor(Math.random() * (config.obstacle.maxCount - config.obstacle.minCount + 1)) + config.obstacle.minCount;
     
-    obstaclePositions.forEach((z, index) => {
+    let currentZ = 15; // Start obstacles after some distance
+    
+    for (let i = 0; i < obstacleCount; i++) {
+        // Random X position from lane positions
+        const xIndex = Math.floor(Math.random() * config.obstacle.lanePositions.length);
+        const x = config.obstacle.lanePositions[xIndex];
+        
+        // Add random spacing between min and max
+        const spacing = config.obstacle.minSpacing + Math.random() * 5;
+        currentZ += spacing;
+        
+        // Make sure we don't go beyond track length
+        if (currentZ < config.track.length - 5) {
+            positions.push({ x, z: currentZ });
+        }
+    }
+    
+    return positions;
+}
+
+function createObstacles() {
+    const obstaclePositions = generateRandomObstaclePositions();
+    
+    obstaclePositions.forEach((pos, index) => {
         // Obstacles for player 1
         const obstacle1 = createObstacle();
-        obstacle1.position.set(0, config.obstacle.height / 2, z);
+        obstacle1.position.set(pos.x, config.obstacle.height / 2, pos.z);
         scene1.add(obstacle1);
         obstacles1.push({ mesh: obstacle1, index });
         
         // Obstacles for player 2
         const obstacle2 = createObstacle();
-        obstacle2.position.set(0, config.obstacle.height / 2, z);
+        obstacle2.position.set(pos.x, config.obstacle.height / 2, pos.z);
         scene2.add(obstacle2);
         obstacles2.push({ mesh: obstacle2, index });
     });
@@ -242,6 +269,15 @@ function startGame() {
     game.isRunning = true;
     startButton.disabled = true;
     startButton.textContent = 'Running...';
+    
+    // Clear existing obstacles
+    obstacles1.forEach(obs => scene1.remove(obs.mesh));
+    obstacles2.forEach(obs => scene2.remove(obs.mesh));
+    obstacles1 = [];
+    obstacles2 = [];
+    
+    // Generate new random obstacle course
+    createObstacles();
     
     // Reset timer and counters
     game.startTime = Date.now();
