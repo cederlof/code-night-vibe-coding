@@ -2,16 +2,19 @@
 const config = {
     canvas: {
         width: 1200,
-        height: 400
+        height: 500
     },
     runner: {
         width: 30,
         height: 50,
         x: 10,
-        groundY: 300,
         speed: 3,
         jumpStrength: 12,
         gravity: 0.6
+    },
+    lane: {
+        height: 250,
+        groundY: 200
     },
     course: {
         startX: 50,
@@ -21,20 +24,17 @@ const config = {
         {
             width: 30,
             height: 40,
-            x: 350,
-            groundY: 310
+            x: 350
         },
         {
             width: 30,
             height: 40,
-            x: 600,
-            groundY: 310
+            x: 600
         },
         {
             width: 30,
             height: 40,
-            x: 900,
-            groundY: 310
+            x: 900
         }
     ],
     pauseDuration: 0.75
@@ -45,17 +45,32 @@ const game = {
     isRunning: false,
     startTime: 0,
     elapsedTime: 0,
-    obstaclesHit: 0,
     lastRunTime: null,
     personalBest: null,
-    runner: {
+    winner: null,
+    player1: {
         x: config.runner.x,
-        y: config.runner.groundY,
+        y: config.lane.groundY,
         velocityY: 0,
         isJumping: false,
         isPaused: false,
         pauseEndTime: 0,
-        hitObstacles: new Set()
+        hitObstacles: new Set(),
+        obstaclesHit: 0,
+        finished: false,
+        finishTime: null
+    },
+    player2: {
+        x: config.runner.x,
+        y: config.lane.groundY + config.lane.height,
+        velocityY: 0,
+        isJumping: false,
+        isPaused: false,
+        pauseEndTime: 0,
+        hitObstacles: new Set(),
+        obstaclesHit: 0,
+        finished: false,
+        finishTime: null
     }
 };
 
@@ -108,100 +123,138 @@ function startGame() {
     // Reset timer and counters
     game.startTime = Date.now();
     game.elapsedTime = 0;
-    game.obstaclesHit = 0;
+    game.winner = null;
     
-    // Reset runner position
-    game.runner.x = config.runner.x;
-    game.runner.y = config.runner.groundY;
-    game.runner.velocityY = 0;
-    game.runner.isJumping = false;
-    game.runner.isPaused = false;
-    game.runner.pauseEndTime = 0;
-    game.runner.hitObstacles.clear();
+    // Reset player 1
+    game.player1.x = config.runner.x;
+    game.player1.y = config.lane.groundY;
+    game.player1.velocityY = 0;
+    game.player1.isJumping = false;
+    game.player1.isPaused = false;
+    game.player1.pauseEndTime = 0;
+    game.player1.hitObstacles.clear();
+    game.player1.obstaclesHit = 0;
+    game.player1.finished = false;
+    game.player1.finishTime = null;
+    
+    // Reset player 2
+    game.player2.x = config.runner.x;
+    game.player2.y = config.lane.groundY + config.lane.height;
+    game.player2.velocityY = 0;
+    game.player2.isJumping = false;
+    game.player2.isPaused = false;
+    game.player2.pauseEndTime = 0;
+    game.player2.hitObstacles.clear();
+    game.player2.obstaclesHit = 0;
+    game.player2.finished = false;
+    game.player2.finishTime = null;
     
     gameLoop();
 }
 
 function handleKeyPress(event) {
-    if (event.code === 'Space') {
-        if (game.isRunning) {
-            jump();
+    if (game.isRunning) {
+        if (event.code === 'Space') {
+            jump(game.player1);
+        } else if (event.code === 'ArrowUp') {
+            event.preventDefault(); // Prevent page scroll
+            jump(game.player2);
         }
     } else if (event.code === 'KeyR') {
         // Restart with R key
-        if (!game.isRunning) {
-            startGame();
-        }
+        startGame();
     }
 }
 
-function jump() {
+function jump(player) {
     // Only jump if on the ground
-    if (!game.runner.isJumping) {
-        game.runner.velocityY = -config.runner.jumpStrength;
-        game.runner.isJumping = true;
+    if (!player.isJumping) {
+        player.velocityY = -config.runner.jumpStrength;
+        player.isJumping = true;
     }
 }
 
-function update() {
-    const now = Date.now() / 1000; // Convert to seconds
+function updatePlayer(player, laneGroundY) {
+    if (player.finished) return;
+    
+    const now = Date.now() / 1000;
     
     // Check if pause has ended
-    if (game.runner.isPaused) {
-        if (now >= game.runner.pauseEndTime) {
-            game.runner.isPaused = false;
+    if (player.isPaused) {
+        if (now >= player.pauseEndTime) {
+            player.isPaused = false;
         } else {
-            // Still paused, don't move
             return;
         }
     }
     
-    // Move runner forward
-    game.runner.x += config.runner.speed;
+    // Move player forward
+    player.x += config.runner.speed;
     
     // Apply gravity
-    game.runner.velocityY += config.runner.gravity;
-    game.runner.y += game.runner.velocityY;
+    player.velocityY += config.runner.gravity;
+    player.y += player.velocityY;
     
     // Ground collision
-    if (game.runner.y >= config.runner.groundY) {
-        game.runner.y = config.runner.groundY;
-        game.runner.velocityY = 0;
-        game.runner.isJumping = false;
+    if (player.y >= laneGroundY) {
+        player.y = laneGroundY;
+        player.velocityY = 0;
+        player.isJumping = false;
     }
     
     // Check obstacle collision
-    checkObstacleCollision();
+    checkObstacleCollision(player);
     
     // Check if reached end
-    if (game.runner.x >= config.course.endX) {
-        endGame();
+    if (player.x >= config.course.endX && !player.finished) {
+        player.finished = true;
+        player.finishTime = game.elapsedTime;
+        
+        // Set winner if this is the first to finish
+        if (!game.winner) {
+            game.winner = player === game.player1 ? 1 : 2;
+        }
+        
+        // End game if both finished
+        if (game.player1.finished && game.player2.finished) {
+            endGame();
+        }
     }
 }
 
-function checkObstacleCollision() {
+function update() {
+    updatePlayer(game.player1, config.lane.groundY);
+    updatePlayer(game.player2, config.lane.groundY + config.lane.height);
+}
+
+function checkObstacleCollision(player) {
     // Check collision with each obstacle
-    const runnerRight = game.runner.x + config.runner.width;
-    const runnerBottom = game.runner.y + config.runner.height;
+    const playerRight = player.x + config.runner.width;
+    const playerBottom = player.y + config.runner.height;
     
     for (let i = 0; i < config.obstacles.length; i++) {
         const obstacle = config.obstacles[i];
         const obstacleRight = obstacle.x + obstacle.width;
-        const obstacleBottom = obstacle.groundY + obstacle.height;
         
-        if (game.runner.x < obstacleRight &&
-            runnerRight > obstacle.x &&
-            game.runner.y < obstacleBottom &&
-            runnerBottom > obstacle.groundY) {
+        // Determine obstacle Y position based on which player
+        const obstacleGroundY = (player === game.player1) 
+            ? config.lane.groundY + 10 
+            : config.lane.groundY + config.lane.height + 10;
+        const obstacleBottom = obstacleGroundY + obstacle.height;
+        
+        if (player.x < obstacleRight &&
+            playerRight > obstacle.x &&
+            player.y < obstacleBottom &&
+            playerBottom > obstacleGroundY) {
             
             // Collision detected!
-            if (!game.runner.isPaused && !game.runner.hitObstacles.has(i)) {
-                game.runner.isPaused = true;
-                game.runner.pauseEndTime = (Date.now() / 1000) + config.pauseDuration;
-                game.runner.hitObstacles.add(i);
-                game.obstaclesHit++;
+            if (!player.isPaused && !player.hitObstacles.has(i)) {
+                player.isPaused = true;
+                player.pauseEndTime = (Date.now() / 1000) + config.pauseDuration;
+                player.hitObstacles.add(i);
+                player.obstaclesHit++;
             }
-            break; // Only pause once per frame
+            break;
         }
     }
 }
@@ -210,11 +263,24 @@ function draw() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw ground
-    ctx.fillStyle = '#95a5a6';
-    ctx.fillRect(0, config.runner.groundY + config.runner.height, canvas.width, 50);
+    // Draw lane divider
+    ctx.strokeStyle = '#7f8c8d';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(0, config.lane.height);
+    ctx.lineTo(canvas.width, config.lane.height);
+    ctx.stroke();
+    ctx.setLineDash([]);
     
-    // Draw start line
+    // Draw ground for both lanes
+    ctx.fillStyle = '#95a5a6';
+    // Lane 1 ground
+    ctx.fillRect(0, config.lane.groundY + config.runner.height, canvas.width, 40);
+    // Lane 2 ground
+    ctx.fillRect(0, config.lane.groundY + config.lane.height + config.runner.height, canvas.width, 40);
+    
+    // Draw start lines
     ctx.strokeStyle = '#2ecc71';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -222,7 +288,7 @@ function draw() {
     ctx.lineTo(config.course.startX, canvas.height);
     ctx.stroke();
     
-    // Draw finish line
+    // Draw finish lines
     ctx.strokeStyle = '#e74c3c';
     ctx.lineWidth = 3;
     ctx.beginPath();
@@ -230,41 +296,64 @@ function draw() {
     ctx.lineTo(config.course.endX, canvas.height);
     ctx.stroke();
     
-    // Draw obstacles
+    // Draw obstacles for both lanes
     ctx.fillStyle = '#e67e22';
     for (const obstacle of config.obstacles) {
+        // Lane 1 obstacle
         ctx.fillRect(
             obstacle.x,
-            obstacle.groundY,
+            config.lane.groundY + 10,
+            obstacle.width,
+            obstacle.height
+        );
+        // Lane 2 obstacle
+        ctx.fillRect(
+            obstacle.x,
+            config.lane.groundY + config.lane.height + 10,
             obstacle.width,
             obstacle.height
         );
     }
     
-    // Draw runner
+    // Draw Player 1 (blue)
     ctx.fillStyle = '#3498db';
     ctx.fillRect(
-        game.runner.x,
-        game.runner.y,
+        game.player1.x,
+        game.player1.y,
         config.runner.width,
         config.runner.height
     );
     
-    // Draw timer and stats (always visible)
+    // Draw Player 2 (red)
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(
+        game.player2.x,
+        game.player2.y,
+        config.runner.width,
+        config.runner.height
+    );
+    
+    // Draw player labels
+    ctx.fillStyle = '#ecf0f1';
+    ctx.font = '16px Arial';
+    ctx.fillText('P1', 10, 20);
+    ctx.fillText('P2', 10, config.lane.height + 20);
+    
+    // Draw timer and stats
     ctx.fillStyle = '#ecf0f1';
     ctx.font = '20px Arial';
     
     if (game.isRunning) {
         // Display current time during run
-        ctx.fillText(`Time: ${game.elapsedTime.toFixed(2)}s`, 10, 30);
+        ctx.fillText(`Time: ${game.elapsedTime.toFixed(2)}s`, canvas.width / 2 - 50, 30);
     } else if (game.lastRunTime !== null) {
         // Display last run time when not running
-        ctx.fillText(`Last Run: ${game.lastRunTime.toFixed(2)}s`, 10, 30);
+        ctx.fillText(`Last Run: ${game.lastRunTime.toFixed(2)}s`, 50, 30);
     }
     
     // Always display personal best if it exists
     if (game.personalBest !== null) {
-        ctx.fillText(`Best: ${game.personalBest.toFixed(2)}s`, 10, 60);
+        ctx.fillText(`Best: ${game.personalBest.toFixed(2)}s`, 50, 60);
     }
 }
 
@@ -282,40 +371,47 @@ function gameLoop() {
 
 function endGame() {
     game.isRunning = false;
-    const finalTime = game.elapsedTime;
+    
+    // Get finish times
+    const p1Time = game.player1.finishTime;
+    const p2Time = game.player2.finishTime;
+    
+    // Determine best time from this race
+    const bestRaceTime = Math.min(p1Time, p2Time);
     
     // Save last run time
-    game.lastRunTime = finalTime;
+    game.lastRunTime = bestRaceTime;
     
     // Check if new personal best
     let isNewBest = false;
-    if (game.personalBest === null || finalTime < game.personalBest) {
-        savePersonalBest(finalTime);
+    if (game.personalBest === null || bestRaceTime < game.personalBest) {
+        savePersonalBest(bestRaceTime);
         isNewBest = true;
     }
     
     startButton.disabled = false;
     startButton.textContent = 'Start';
     
-    // Don't reset runner position - stay at finish line
-    
     // Redraw to show stats
     draw();
     
-    // Show completion stats
-    ctx.fillStyle = '#2ecc71';
-    ctx.font = '30px Arial';
-    ctx.fillText('Finished!', canvas.width / 2 - 70, canvas.height / 2 - 40);
+    // Show winner announcement
+    ctx.fillStyle = '#f39c12';
+    ctx.font = '40px Arial';
+    ctx.fillText(`Player ${game.winner} Wins!`, canvas.width / 2 - 120, canvas.height / 2 - 60);
     
-    ctx.fillStyle = '#ecf0f1';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Time: ${finalTime.toFixed(2)}s`, canvas.width / 2 - 60, canvas.height / 2);
-    ctx.fillText(`Obstacles Hit: ${game.obstaclesHit}`, canvas.width / 2 - 80, canvas.height / 2 + 30);
+    // Show both times
+    ctx.fillStyle = '#3498db';
+    ctx.font = '24px Arial';
+    ctx.fillText(`P1: ${p1Time.toFixed(2)}s (${game.player1.obstaclesHit} hits)`, canvas.width / 2 - 140, canvas.height / 2 - 10);
+    
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillText(`P2: ${p2Time.toFixed(2)}s (${game.player2.obstaclesHit} hits)`, canvas.width / 2 - 140, canvas.height / 2 + 25);
     
     if (isNewBest) {
-        ctx.fillStyle = '#f39c12';
-        ctx.font = '18px Arial';
-        ctx.fillText('NEW PERSONAL BEST!', canvas.width / 2 - 90, canvas.height / 2 + 60);
+        ctx.fillStyle = '#2ecc71';
+        ctx.font = '20px Arial';
+        ctx.fillText('NEW PERSONAL BEST!', canvas.width / 2 - 100, canvas.height / 2 + 60);
     }
     
     ctx.fillStyle = '#95a5a6';

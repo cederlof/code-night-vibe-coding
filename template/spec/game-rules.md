@@ -1,5 +1,9 @@
 # Game Rules
 
+## Game Modes
+- **Single Player**: Race against your personal best time
+- **Two Player**: Race head-to-head against another player on same screen
+
 ## Starting
 - Runner starts behind (left of) the start line
 - Player presses start button to begin run
@@ -23,7 +27,17 @@
 - Runner resets to start position when start button is pressed
 
 ## Win Condition
-- Beat your previous personal best time
+- **Single Player**: Beat your previous personal best time
+- **Two Player**: First player to cross the finish line wins
+
+## Two-Player Mode
+- Both runners start simultaneously
+- Player 1 (blue) runs in top lane
+- Player 2 (red) runs in bottom lane
+- Each lane has identical obstacles
+- Independent collision detection for each player
+- Both times displayed at finish
+- Winner announced when first player crosses finish line
 
 ## No Failure
 - Player always completes the course

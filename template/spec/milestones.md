@@ -45,7 +45,28 @@
 
 ---
 
-## M4: Visual & Audio Polish
+## M4: Two-Player Racing
+**Goal**: Race against another player on same screen
+
+- Two runners on same track, one above the other
+- Player 1 lane (top) and Player 2 lane (bottom)
+- Split canvas vertically into two lanes
+- Each lane has identical obstacles at same positions
+- Player 1 uses SPACE to jump
+- Player 2 uses UP ARROW to jump
+- Both runners start simultaneously with Start button
+- Both runners move at same speed
+- Independent collision detection for each player
+- First player to cross finish line wins
+- Display both player times when race ends
+- Show winner announcement
+- Each player has different color (blue vs red)
+
+**Playable**: Can race head-to-head with a friend
+
+---
+
+## M5: Visual & Audio Polish
 **Goal**: Smooth and satisfying feel
 
 - Smooth running animation (minimal but fluid)
@@ -58,7 +79,7 @@
 
 ---
 
-## M5: Leaderboard
+## M6: Leaderboard
 **Goal**: Competition with others
 
 - Leaderboard displays top times
