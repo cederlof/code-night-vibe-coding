@@ -19,6 +19,8 @@
 - Timer stops
 - Final time is recorded
 - Number of obstacles hit is counted
+- Runner stays at the finish line
+- Runner resets to start position when start button is pressed
 
 ## Win Condition
 - Beat your previous personal best time

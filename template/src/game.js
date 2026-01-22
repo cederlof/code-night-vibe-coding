@@ -82,10 +82,21 @@ canvas.height = config.canvas.height;
 
 // Get UI elements
 const startButton = document.getElementById('startButton');
+const clearBestButton = document.getElementById('clearBestButton');
 
 // Event listeners
 startButton.addEventListener('click', startGame);
+clearBestButton.addEventListener('click', clearBest);
 document.addEventListener('keydown', handleKeyPress);
+
+function clearBest() {
+    if (confirm('Are you sure you want to clear your personal best?')) {
+        localStorage.removeItem('obstacleRunnerBestTime');
+        game.personalBest = null;
+        game.lastRunTime = null;
+        draw(); // Redraw to update display
+    }
+}
 
 function startGame() {
     if (game.isRunning) return;
@@ -286,15 +297,9 @@ function endGame() {
     startButton.disabled = false;
     startButton.textContent = 'Start';
     
-    // Reset runner to start position
-    game.runner.x = config.runner.x;
-    game.runner.y = config.runner.groundY;
-    game.runner.velocityY = 0;
-    game.runner.isJumping = false;
-    game.runner.isPaused = false;
-    game.runner.pauseEndTime = 0;
+    // Don't reset runner position - stay at finish line
     
-    // Redraw to show runner at start
+    // Redraw to show stats
     draw();
     
     // Show completion stats

@@ -24,7 +24,14 @@ body {
     margin: 0 auto 20px;
 }
 
-#startButton {
+#game-container > div:first-of-type {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+#startButton, #clearBestButton, #clearBestButton {
     padding: 15px 40px;
     font-size: 18px;
     background-color: #3498db;
@@ -35,13 +42,21 @@ body {
     transition: background-color 0.3s;
 }
 
-#startButton:hover {
+#startButton:hover, #clearBestButton:hover {
     background-color: #2980b9;
 }
 
-#startButton:disabled {
+#startButton:disabled, #clearBestButton:disabled {
     background-color: #95a5a6;
     cursor: not-allowed;
+}
+
+#clearBestButton {
+    background-color: #e74c3c;
+}
+
+#clearBestButton:hover {
+    background-color: #c0392b;
 }
 
 #instructions {

@@ -37,6 +37,9 @@
 - Personal best time stored (local storage)
 - Display personal best during run
 - Restart functionality
+- Clear best button to reset personal best
+- Runner stays at finish line after completing run
+- Runner resets to start when start button is pressed
 
 **Playable**: Can complete runs and track improvement
 
