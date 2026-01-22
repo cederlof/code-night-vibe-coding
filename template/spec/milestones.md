@@ -66,7 +66,30 @@
 
 ---
 
-## M5: Visual & Audio Polish
+## M5: Manual Movement Controls
+**Goal**: Players control speed by pressing movement keys
+
+- Remove automatic forward movement
+- Start button initializes race, but players must press movement keys to go
+- Player 1 controls:
+  - W key for jumping
+  - D key for moving forward
+- Player 2 controls:
+  - Numpad 8 for jumping
+  - Numpad 6 for moving forward
+- Speed system:
+  - Players accelerate by repeatedly pressing the movement key
+  - Faster key presses = faster movement speed
+  - Slower key presses = speed decreases
+  - Speed has minimum and maximum limits
+  - Speed decays gradually when not pressing keys
+- Both players start stationary and must "gas pedal" to move
+
+**Playable**: Race by controlling your own speed
+
+---
+
+## M6: Visual & Audio Polish
 **Goal**: Smooth and satisfying feel
 
 - Smooth running animation (minimal but fluid)
@@ -76,14 +99,3 @@
 - Visual feedback when hitting obstacle
 
 **Playable**: Feels good to play
-
----
-
-## M6: Leaderboard
-**Goal**: Competition with others
-
-- Leaderboard displays top times
-- Player can submit their time to leaderboard
-- Leaderboard shows player's rank
-
-**Playable**: Full version 1 experience

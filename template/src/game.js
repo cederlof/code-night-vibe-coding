@@ -8,7 +8,10 @@ const config = {
         width: 30,
         height: 50,
         x: 10,
-        speed: 3,
+        minSpeed: 0.5,
+        maxSpeed: 8,
+        acceleration: 0.8,
+        speedDecay: 0.02,
         jumpStrength: 12,
         gravity: 0.6
     },
@@ -52,6 +55,8 @@ const game = {
         x: config.runner.x,
         y: config.lane.groundY,
         velocityY: 0,
+        speed: 0,
+        lastMoveTime: 0,
         isJumping: false,
         isPaused: false,
         pauseEndTime: 0,
@@ -64,6 +69,8 @@ const game = {
         x: config.runner.x,
         y: config.lane.groundY + config.lane.height,
         velocityY: 0,
+        speed: 0,
+        lastMoveTime: 0,
         isJumping: false,
         isPaused: false,
         pauseEndTime: 0,
@@ -129,6 +136,8 @@ function startGame() {
     game.player1.x = config.runner.x;
     game.player1.y = config.lane.groundY;
     game.player1.velocityY = 0;
+    game.player1.speed = 0;
+    game.player1.lastMoveTime = 0;
     game.player1.isJumping = false;
     game.player1.isPaused = false;
     game.player1.pauseEndTime = 0;
@@ -141,6 +150,8 @@ function startGame() {
     game.player2.x = config.runner.x;
     game.player2.y = config.lane.groundY + config.lane.height;
     game.player2.velocityY = 0;
+    game.player2.speed = 0;
+    game.player2.lastMoveTime = 0;
     game.player2.isJumping = false;
     game.player2.isPaused = false;
     game.player2.pauseEndTime = 0;
@@ -154,16 +165,45 @@ function startGame() {
 
 function handleKeyPress(event) {
     if (game.isRunning) {
-        if (event.code === 'Space') {
+        // Player 1 controls: W = jump, D = move
+        if (event.code === 'KeyW') {
             jump(game.player1);
-        } else if (event.code === 'ArrowUp') {
-            event.preventDefault(); // Prevent page scroll
+        } else if (event.code === 'KeyD') {
+            acceleratePlayer(game.player1);
+        }
+        // Player 2 controls: Numpad 8 = jump, Numpad 6 = move
+        else if (event.code === 'Numpad8') {
             jump(game.player2);
+        } else if (event.code === 'Numpad6') {
+            acceleratePlayer(game.player2);
         }
     } else if (event.code === 'KeyR') {
         // Restart with R key
         startGame();
     }
+}
+
+function acceleratePlayer(player) {
+    const now = Date.now();
+    const timeSinceLastMove = now - player.lastMoveTime;
+    
+    // Calculate acceleration based on key press frequency
+    // Faster presses (shorter time gaps) = more acceleration
+    let accelerationMultiplier = 1;
+    if (timeSinceLastMove < 250 && player.lastMoveTime > 0) {
+        // Fast tapping - bonus acceleration
+        accelerationMultiplier = 2;
+    } else if (timeSinceLastMove < 500 && player.lastMoveTime > 0) {
+        // Medium tapping
+        accelerationMultiplier = 1.3;
+    }
+    
+    player.speed = Math.min(
+        config.runner.maxSpeed,
+        player.speed + (config.runner.acceleration * accelerationMultiplier)
+    );
+    
+    player.lastMoveTime = now;
 }
 
 function jump(player) {
@@ -184,12 +224,17 @@ function updatePlayer(player, laneGroundY) {
         if (now >= player.pauseEndTime) {
             player.isPaused = false;
         } else {
+            // Speed decays even when paused
+            player.speed = Math.max(config.runner.minSpeed, player.speed - config.runner.speedDecay);
             return;
         }
     }
     
-    // Move player forward
-    player.x += config.runner.speed;
+    // Apply speed decay when not pressing movement key
+    player.speed = Math.max(config.runner.minSpeed, player.speed - config.runner.speedDecay);
+    
+    // Move player forward based on current speed
+    player.x += player.speed;
     
     // Apply gravity
     player.velocityY += config.runner.gravity;

@@ -6,11 +6,16 @@
 
 ## Starting
 - Runner starts behind (left of) the start line
-- Player presses start button to begin run
-- Timer starts when runner begins moving
+- Player presses start button to initialize race
+- Players must press movement keys to make figures move forward
+- Timer starts when start button is pressed
 
 ## Running
-- Runner moves automatically left to right at constant speed
+- Runners move forward when players press movement keys
+- Player 1 uses D key, Player 2 uses Numpad 6
+- Speed increases with faster key presses
+- Speed decreases with slower key presses or no presses
+- Speed gradually decays when not pressing movement keys
 - Course layout is fixed (same every run)
 
 ## Obstacles
