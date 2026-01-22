@@ -3,7 +3,8 @@
 ## M1: Core Movement
 **Goal**: Runner moves
 
-- Runner sprite moves left to right automatically after start
+- Runner sprite starts behind (left of) the start line
+- Runner moves left to right automatically after start button pressed
 - Start button triggers movement
 - Jump input makes runner jump
 - Basic visual: rectangle runner

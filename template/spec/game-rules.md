@@ -1,6 +1,7 @@
 # Game Rules
 
 ## Starting
+- Runner starts behind (left of) the start line
 - Player presses start button to begin run
 - Timer starts when runner begins moving
 
