@@ -1,0 +1,295 @@
+:root {
+  color-scheme: light dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.version {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 10;
+  font-size: 12px;
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+
+.app {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.hud {
+  padding: 12px;
+  border-bottom: 1px solid GrayText;
+}
+
+.hud__row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hud__row--spread {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.hud__left,
+.hud__right {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.hud__stat {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.hud__label {
+  opacity: 0.8;
+}
+
+.playfield {
+  position: relative;
+  overflow: hidden;
+  margin: 12px;
+  border: 1px solid GrayText;
+  border-radius: 10px;
+  min-height: 280px;
+  background: Canvas;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+}
+
+.scene canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.target {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: Highlight;
+  border: 1px solid CanvasText;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.effect-ring {
+  position: absolute;
+  z-index: 2;
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 2px solid CanvasText;
+  opacity: 0.9;
+  pointer-events: none;
+  animation: ring-pop 160ms ease-out forwards;
+}
+
+@keyframes ring-pop {
+  from {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.popup {
+  position: absolute;
+  z-index: 2;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 1px 0 color-mix(in srgb, CanvasText 30%, transparent);
+  animation: popup-float 520ms ease-out forwards;
+}
+
+.popup--pos {
+  color: CanvasText;
+}
+
+.popup--neg {
+  color: CanvasText;
+  opacity: 0.9;
+}
+
+@keyframes popup-float {
+  from {
+    transform: translateY(0);
+    opacity: 0.95;
+  }
+  to {
+    transform: translateY(-18px);
+    opacity: 0;
+  }
+}
+
+.overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, Canvas 80%, transparent);
+}
+
+.overlay[hidden] {
+  display: none;
+}
+
+.overlay__panel {
+  width: min(480px, 100%);
+  border: 1px solid GrayText;
+  border-radius: 12px;
+  padding: 16px;
+  background: Canvas;
+}
+
+.overlay__text {
+  margin: 8px 0 14px;
+}
+
+.overlay__button {
+  width: 100%;
+}
+
+.hp {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hp__bar {
+  width: 160px;
+  height: 10px;
+  border: 1px solid GrayText;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.hp__fill {
+  height: 100%;
+  width: 100%;
+  background: CanvasText;
+  opacity: 0.75;
+}
+
+.hp__text {
+  min-width: 28px;
+  text-align: right;
+  font-weight: 700;
+}
+
+.crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: CanvasText;
+  opacity: 0.75;
+}
+
+.crosshair::before {
+  width: 16px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.crosshair::after {
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -50%);
+}
+
+.damage {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background:
+    radial-gradient(closest-side at 50% 50%, transparent 62%, color-mix(in srgb, CanvasText 20%, transparent) 100%);
+  transition: opacity 120ms ease-out;
+}
+
+.weapons__group {
+  margin: 10px 0 14px;
+  padding: 10px;
+  border: 1px solid GrayText;
+  border-radius: 10px;
+}
+
+.weapons__item {
+  display: block;
+  margin: 8px 0;
+}
+
+.results {
+  margin: 12px 0 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.results__row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+}
+
+.results__row dt {
+  opacity: 0.8;
+}
+
+.results__row dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.results__note {
+  margin: 10px 0 14px;
+  font-size: 12px;
+  opacity: 0.75;
+}

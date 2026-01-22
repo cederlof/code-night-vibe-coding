@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Night - Choose Your Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 20px;
+        }
+
+        .game-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .game-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .game-description {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        .game-card:nth-child(1) {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .game-card:nth-child(1) .game-title,
+        .game-card:nth-child(1) .game-description {
+            color: white;
+        }
+
+        .game-card:nth-child(2) {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .game-card:nth-child(2) .game-title,
+        .game-card:nth-child(2) .game-description {
+            color: white;
+        }
+
+        .game-card:nth-child(3) {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        .game-card:nth-child(3) .game-title,
+        .game-card:nth-child(3) .game-description {
+            color: white;
+        }
+
+        .game-card:nth-child(4) {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .game-card:nth-child(4) .game-title,
+        .game-card:nth-child(4) .game-description {
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .games-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Game Night</h1>
+        <p class="subtitle">Choose your adventure!</p>
+        
+        <div class="games-grid">
+            <a href="FPS_shooter/index.html" class="game-card">
+                <div class="game-icon">🎯</div>
+                <h2 class="game-title">FPS Shooter</h2>
+                <p class="game-description">Survive waves of enemies. Kill to advance levels.<br><strong>⌨️ WASD + Mouse | Click to shoot</strong></p>
+            </a>
+
+            <a href="SantaSlayer/index.html" class="game-card">
+                <div class="game-icon">🎅</div>
+                <h2 class="game-title">Santa Slayer</h2>
+                <p class="game-description">Shoot targets through the rifle scope. Hit as many as you can!<br><strong>🖱️ Mouse aim + Click to shoot</strong></p>
+            </a>
+
+            <a href="SpaceJam/index.html" class="game-card">
+                <div class="game-icon">🚀</div>
+                <h2 class="game-title">Space Jam</h2>
+                <p class="game-description">Cross the space highway. Avoid ships & asteroids!<br><strong>⌨️ Arrow keys to move</strong></p>
+            </a>
+
+            <a href="SpaceRacer/index.html" class="game-card">
+                <div class="game-icon">🏎️</div>
+                <h2 class="game-title">Space Racer</h2>
+                <p class="game-description">2-player racing. Dodge obstacles, survive longest!<br><strong>P1: W/A/D | P2: Numpad 8/4/6 | R=restart</strong></p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

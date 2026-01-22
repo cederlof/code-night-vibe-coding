@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
+    <title>Rifle Sight Shooter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: #1a2332;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #gameCanvas {
+            display: block;
+            cursor: none;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #00ff00;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5), 2px 2px 6px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            border: 2px solid rgba(0, 255, 0, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        
+        #hud div {
+            margin: 5px 0;
+            letter-spacing: 1px;
+        }
+        
+        #muteBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px 20px;
+            color: #ffffff;
+            font-size: 24px;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 15;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        #muteBtn:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.05);
+        }
+        
+        #muteBtn.muted {
+            color: #ff4444;
+            border-color: rgba(255, 68, 68, 0.5);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            z-index: 20;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 50px 80px;
+            border-radius: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        #gameOver h1 {
+            font-size: 56px;
+            margin-bottom: 20px;
+            color: #ff4444;
+            text-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+            letter-spacing: 3px;
+        }
+
+        #gameOver p {
+            font-size: 24px;
+            margin: 10px 0;
+            color: #cccccc;
+        }
+        
+        .stats-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 25px 40px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 20px;
+        }
+        
+        .stat-label {
+            color: #aaaaaa;
+            margin-right: 30px;
+        }
+        
+        .stat-value {
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+
+        #tryAgainBtn {
+            font-size: 22px;
+            padding: 18px 50px;
+            background: linear-gradient(135deg, #ff4444, #cc0000);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 68, 68, 0.4);
+        }
+
+        #tryAgainBtn:hover {
+            background: linear-gradient(135deg, #ff6666, #ff3333);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(255, 68, 68, 0.6);
+        }
+        
+        #tryAgainBtn:active {
+            transform: translateY(0);
+        }
+
+        #levelTransition {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 64px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(0, 255, 0, 0.8), 3px 3px 6px rgba(0, 0, 0, 0.9);
+            pointer-events: none;
+            display: none;
+            z-index: 15;
+            animation: levelPop 1s ease-out;
+        }
+        
+        @keyframes levelPop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 25;
+            background: linear-gradient(135deg, rgba(139, 0, 0, 0.9), rgba(0, 100, 0, 0.9));
+            padding: 60px 100px;
+            border-radius: 20px;
+            border: 4px solid #FFD700;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.5);
+        }
+        
+        #startScreen h1 {
+            font-size: 72px;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff0000, #ffffff, #00ff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            letter-spacing: 5px;
+            font-weight: bold;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.5));
+        }
+        
+        #startScreen p {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #ffffff;
+            line-height: 1.6;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        .credits {
+            font-size: 18px;
+            color: #FFD700;
+            margin-bottom: 30px;
+            font-style: italic;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+        }
+        
+        #playBtn {
+            font-size: 28px;
+            padding: 20px 60px;
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            color: #ffffff;
+            border: 3px solid #FFD700;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 20px rgba(255, 0, 0, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        #playBtn:hover {
+            background: linear-gradient(135deg, #ff3333, #ff0000);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 0, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.5);
+        }
+        
+        #playBtn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="startScreen">
+        <h1>SANTA SLAYER</h1>
+        <p>Slay Santa to advance through levels.<br>Each miss costs ammo. Run out and it's game over!</p>
+        <p class="credits">Created by Oscar & Johanna</p>
+        <button id="playBtn">Play Game</button>
+    </div>
+    
+    <div id="hud" style="display: none;">
+        <div>Level: <span id="levelDisplay">1</span></div>
+        <div>Ammo: <span id="ammoDisplay">5</span></div>
+    </div>
+    
+    <button id="muteBtn" title="Toggle Sound">🔊</button>
+
+    <div id="levelTransition"></div>
+
+    <div id="gameOver">
+        <h1>GAME OVER</h1>
+        <p>Levels Completed: <span id="finalLevel">0</span></p>
+        <div class="stats-container">
+            <div class="stat-row">
+                <span class="stat-label">Total Shots:</span>
+                <span class="stat-value" id="totalShots">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Hits:</span>
+                <span class="stat-value" id="totalHits">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Misses:</span>
+                <span class="stat-value" id="totalMisses">0</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Accuracy:</span>
+                <span class="stat-value" id="accuracy">0</span><span class="stat-value">%</span>
+            </div>
+        </div>
+        <button id="tryAgainBtn">Try Again</button>
+    </div>
+
+    <script src="./main.js"></script>
+</body>
+</html>

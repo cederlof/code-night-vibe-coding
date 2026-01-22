@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="./">
+    <title>Click Reflex</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="version" id="version" aria-label="Version" title="Build version"></div>
+    <main class="app" aria-label="Click Reflex">
+      <header class="hud" aria-label="HUD">
+        <div class="hud__row hud__row--spread">
+          <div class="hud__left">
+            <div class="hp" aria-label="Player health">
+              <span class="hud__label">HP</span>
+              <div class="hp__bar" role="progressbar" aria-valuemin="0" aria-valuemax="200" aria-valuenow="200">
+                <div class="hp__fill" id="playerHpFill" style="width: 100%"></div>
+              </div>
+              <span class="hp__text" id="playerHpText">200</span>
+            </div>
+          </div>
+          <div class="hud__right">
+            <div class="hud__stat"><span class="hud__label">Weapon</span> <span id="weaponName">—</span></div>
+            <div class="hud__stat"><span class="hud__label">Level</span> <span id="level">1</span></div>
+            <div class="hud__stat"><span class="hud__label">Ammo</span> <span id="ammo">0</span></div>
+            <div class="hud__stat"><span class="hud__label">Kills</span> <span id="kills">0</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="playfield" id="playfield" aria-label="Playfield">
+        <div class="scene" id="scene" aria-hidden="true"></div>
+        <div class="crosshair" id="crosshair" aria-hidden="true"></div>
+        <div class="damage" id="damage" aria-hidden="true"></div>
+        <div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="overlayTitle">
+          <div class="overlay__panel">
+            <h2 id="overlayTitle">ShapeStrike FPS</h2>
+            <p class="overlay__text" id="overlayText">Choose a weapon, then click Start. (WASD + mouse, click to shoot.)</p>
+
+            <form class="weapons" id="weaponForm">
+              <fieldset class="weapons__group">
+                <legend>Choose weapon</legend>
+                <label class="weapons__item"><input type="radio" name="weapon" value="pistol" checked /> Pistol (balanced)</label>
+                <label class="weapons__item"><input type="radio" name="weapon" value="rifle" /> Rifle (fast fire)</label>
+                <label class="weapons__item"><input type="radio" name="weapon" value="shotgun" /> Shotgun (close burst)</label>
+              </fieldset>
+            </form>
+
+            <dl class="results" id="results" hidden>
+              <div class="results__row"><dt>Kills</dt><dd id="resultKills">0</dd></div>
+              <div class="results__row"><dt>Time alive</dt><dd id="resultTime">0.0s</dd></div>
+            </dl>
+
+            <button id="startBtn" type="button" class="overlay__button">Start</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+          "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script type="module" src="./fps.js"></script>
+  </body>
+</html>
