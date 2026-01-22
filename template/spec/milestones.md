@@ -115,7 +115,30 @@
 
 ---
 
-## M7: Visual & Audio Polish
+## M7: Strafing Controls
+**Goal**: Add left/right movement for dodging obstacles
+
+- Player 1 controls:
+  - W key for forward movement/speed
+  - A key for strafing left
+  - D key for strafing right
+- Player 2 controls:
+  - Numpad 8 for forward movement/speed
+  - Numpad 4 for strafing left
+  - Numpad 6 for strafing right
+- Strafing mechanics:
+  - Players can move left/right within their lane
+  - Smooth horizontal movement
+  - Lane boundaries prevent moving too far left/right
+  - Strafing allows dodging obstacles sideways
+  - Maintain forward momentum while strafing
+- Visual feedback for strafe position
+
+**Playable**: Dodge obstacles by strafing left and right
+
+---
+
+## M8: Visual & Audio Polish
 **Goal**: Smooth and satisfying feel
 
 - Smooth running animation (minimal but fluid)
@@ -128,7 +151,7 @@
 
 ---
 
-## M8: Leaderboard
+## M9: Leaderboard
 **Goal**: Competition with others
 
 - Leaderboard displays top times

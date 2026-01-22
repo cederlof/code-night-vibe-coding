@@ -8,13 +8,15 @@ const config = {
         maxSpeed: 0.5,
         acceleration: 0.03,
         speedDecay: 0.002,
+        strafeSpeed: 0.1,
         jumpStrength: 0.3,
         gravity: 0.015
     },
     track: {
         width: 10,
         length: 100,
-        laneWidth: 5
+        laneWidth: 5,
+        strafeLimit: 2
     },
     obstacle: {
         width: 1.5,
@@ -117,12 +119,12 @@ function init3D() {
     
     // Create cameras
     camera1 = new THREE.PerspectiveCamera(75, 600 / 500, 0.1, 1000);
-    camera1.position.set(-2.5, 3, -5);
-    camera1.lookAt(-2.5, 1, 10);
+    camera1.position.set(0, 3, -5);
+    camera1.lookAt(0, 1, 10);
     
     camera2 = new THREE.PerspectiveCamera(75, 600 / 500, 0.1, 1000);
-    camera2.position.set(2.5, 3, -5);
-    camera2.lookAt(2.5, 1, 10);
+    camera2.position.set(0, 3, -5);
+    camera2.lookAt(0, 1, 10);
     
     // Add lights to both scenes
     addLights(scene1);
@@ -137,19 +139,19 @@ function init3D() {
     
     // Create player meshes
     game.player1.mesh = createPlayer(0x3498db);
-    game.player1.mesh.position.set(-2.5, config.runner.height / 2, 0);
+    game.player1.mesh.position.set(0, config.runner.height / 2, 0);
     scene1.add(game.player1.mesh);
     
     game.player2.mesh = createPlayer(0xe74c3c);
-    game.player2.mesh.position.set(2.5, config.runner.height / 2, 0);
+    game.player2.mesh.position.set(0, config.runner.height / 2, 0);
     scene2.add(game.player2.mesh);
     
     // Create obstacles
     createObstacles();
     
     // Create finish line
-    createFinishLine(scene1, -2.5);
-    createFinishLine(scene2, 2.5);
+    createFinishLine(scene1, 0);
+    createFinishLine(scene2, 0);
 }
 
 function addLights(scene) {
@@ -186,13 +188,13 @@ function createObstacles() {
     obstaclePositions.forEach((z, index) => {
         // Obstacles for player 1
         const obstacle1 = createObstacle();
-        obstacle1.position.set(-2.5, config.obstacle.height / 2, z);
+        obstacle1.position.set(0, config.obstacle.height / 2, z);
         scene1.add(obstacle1);
         obstacles1.push({ mesh: obstacle1, index });
         
         // Obstacles for player 2
         const obstacle2 = createObstacle();
-        obstacle2.position.set(2.5, config.obstacle.height / 2, z);
+        obstacle2.position.set(0, config.obstacle.height / 2, z);
         scene2.add(obstacle2);
         obstacles2.push({ mesh: obstacle2, index });
     });
@@ -248,6 +250,7 @@ function startGame() {
     // Reset player 1
     game.player1.z = 0;
     game.player1.y = 0;
+    game.player1.x = 0;
     game.player1.velocityY = 0;
     game.player1.speed = 0;
     game.player1.lastMoveTime = 0;
@@ -262,6 +265,7 @@ function startGame() {
     // Reset player 2
     game.player2.z = 0;
     game.player2.y = 0;
+    game.player2.x = 0;
     game.player2.velocityY = 0;
     game.player2.speed = 0;
     game.player2.lastMoveTime = 0;
@@ -278,17 +282,21 @@ function startGame() {
 
 function handleKeyPress(event) {
     if (game.isRunning) {
-        // Player 1 controls: W = jump, D = move
+        // Player 1 controls: W = forward, A = strafe left, D = strafe right
         if (event.code === 'KeyW') {
-            jump(game.player1);
-        } else if (event.code === 'KeyD') {
             acceleratePlayer(game.player1);
+        } else if (event.code === 'KeyA') {
+            strafePlayer(game.player1, -1);
+        } else if (event.code === 'KeyD') {
+            strafePlayer(game.player1, 1);
         }
-        // Player 2 controls: Numpad 8 = jump, Numpad 6 = move
+        // Player 2 controls: Numpad 8 = forward, Numpad 4 = strafe left, Numpad 6 = strafe right
         else if (event.code === 'Numpad8') {
-            jump(game.player2);
-        } else if (event.code === 'Numpad6') {
             acceleratePlayer(game.player2);
+        } else if (event.code === 'Numpad4') {
+            strafePlayer(game.player2, -1);
+        } else if (event.code === 'Numpad6') {
+            strafePlayer(game.player2, 1);
         }
     } else if (event.code === 'KeyR') {
         // Restart with R key
@@ -313,6 +321,16 @@ function acceleratePlayer(player) {
     );
     
     player.lastMoveTime = now;
+}
+
+function strafePlayer(player, direction) {
+    // direction: -1 for left, 1 for right
+    const newX = player.x + (direction * config.runner.strafeSpeed);
+    
+    // Apply lane boundaries
+    if (Math.abs(newX) <= config.track.strafeLimit) {
+        player.x = newX;
+    }
 }
 
 function jump(player) {
@@ -356,6 +374,7 @@ function updatePlayer(player) {
     
     // Update mesh position
     if (player.mesh) {
+        player.mesh.position.x = player.x;
         player.mesh.position.z = player.z;
         player.mesh.position.y = player.y + config.runner.height / 2;
     }
@@ -385,6 +404,8 @@ function checkObstacleCollision(player) {
         if (player.hitObstacles.has(obstacle.index)) continue;
         
         const obstacleZ = obstacle.mesh.position.z;
+        const obstacleX = obstacle.mesh.position.x;
+        
         const playerFront = player.z + config.runner.depth / 2;
         const playerBack = player.z - config.runner.depth / 2;
         const obstacleFront = obstacleZ + config.obstacle.depth / 2;
@@ -392,16 +413,24 @@ function checkObstacleCollision(player) {
         
         // Check Z overlap
         if (playerFront > obstacleBack && playerBack < obstacleFront) {
-            // Check Y overlap (height)
-            if (player.y < config.obstacle.height) {
-                // Collision!
-                if (!player.isPaused) {
-                    player.isPaused = true;
-                    player.pauseEndTime = (Date.now() / 1000) + config.pauseDuration;
-                    player.hitObstacles.add(obstacle.index);
-                    player.obstaclesHit++;
+            // Check X overlap (horizontal position)
+            const playerLeft = player.x - config.runner.width / 2;
+            const playerRight = player.x + config.runner.width / 2;
+            const obstacleLeft = obstacleX - config.obstacle.width / 2;
+            const obstacleRight = obstacleX + config.obstacle.width / 2;
+            
+            if (playerRight > obstacleLeft && playerLeft < obstacleRight) {
+                // Check Y overlap (height)
+                if (player.y < config.obstacle.height) {
+                    // Collision!
+                    if (!player.isPaused) {
+                        player.isPaused = true;
+                        player.pauseEndTime = (Date.now() / 1000) + config.pauseDuration;
+                        player.hitObstacles.add(obstacle.index);
+                        player.obstaclesHit++;
+                    }
+                    break;
                 }
-                break;
             }
         }
     }
@@ -412,11 +441,13 @@ function update() {
     updatePlayer(game.player2);
     
     // Update camera positions to follow players
+    camera1.position.x = game.player1.x;
     camera1.position.z = game.player1.z - 5;
-    camera1.lookAt(-2.5, 1, game.player1.z + 10);
+    camera1.lookAt(game.player1.x, 1, game.player1.z + 10);
     
+    camera2.position.x = game.player2.x;
     camera2.position.z = game.player2.z - 5;
-    camera2.lookAt(2.5, 1, game.player2.z + 10);
+    camera2.lookAt(game.player2.x, 1, game.player2.z + 10);
 }
 
 function render() {
