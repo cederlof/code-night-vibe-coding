@@ -34,6 +34,8 @@ const config = {
 // Game state
 const game = {
     isRunning: false,
+    countdown: 0,
+    countdownActive: false,
     startTime: 0,
     elapsedTime: 0,
     lastRunTime: null,
@@ -43,6 +45,7 @@ const game = {
         z: 0,
         y: 0,
         x: -2.5,
+        targetX: 0,
         velocityY: 0,
         speed: 0,
         lastMoveTime: 0,
@@ -53,12 +56,14 @@ const game = {
         obstaclesHit: 0,
         finished: false,
         finishTime: null,
-        mesh: null
+        mesh: null,
+        cameraShake: 0
     },
     player2: {
         z: 0,
         y: 0,
         x: 2.5,
+        targetX: 0,
         velocityY: 0,
         speed: 0,
         lastMoveTime: 0,
@@ -69,7 +74,8 @@ const game = {
         obstaclesHit: 0,
         finished: false,
         finishTime: null,
-        mesh: null
+        mesh: null,
+        cameraShake: 0
     }
 };
 
@@ -102,6 +108,8 @@ function init3D() {
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(1200, 500);
     renderer.autoClear = false;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     
     // Create 2D canvas overlay for UI
@@ -156,23 +164,75 @@ function init3D() {
     // Create finish line
     createFinishLine(scene1, 0);
     createFinishLine(scene2, 0);
+    
+    // Create side barriers
+    createBarriers(scene1);
+    createBarriers(scene2);
 }
 
 function addLights(scene) {
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
     directionalLight.position.set(10, 20, 5);
+    directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
     scene.add(directionalLight);
+    
+    // Spotlight following player
+    const spotlight = new THREE.SpotLight(0xffffff, 0.5);
+    spotlight.position.set(0, 10, 0);
+    spotlight.angle = Math.PI / 6;
+    spotlight.penumbra = 0.3;
+    spotlight.decay = 2;
+    spotlight.distance = 50;
+    spotlight.castShadow = true;
+    scene.add(spotlight);
+    scene.userData.spotlight = spotlight;
 }
 
 function createGround() {
     const geometry = new THREE.PlaneGeometry(config.track.width, config.track.length);
-    const material = new THREE.MeshLambertMaterial({ color: 0x95a5a6 });
+    
+    // Create texture using canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    
+    // Base color
+    ctx.fillStyle = '#7f8c8d';
+    ctx.fillRect(0, 0, 512, 512);
+    
+    // Grid lines
+    ctx.strokeStyle = '#95a5a6';
+    ctx.lineWidth = 2;
+    const gridSize = 64;
+    for (let i = 0; i <= 512; i += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 512);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(512, i);
+        ctx.stroke();
+    }
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 10);
+    
+    const material = new THREE.MeshLambertMaterial({ map: texture });
     const ground = new THREE.Mesh(geometry, material);
     ground.rotation.x = -Math.PI / 2;
     ground.position.z = config.track.length / 2;
+    ground.receiveShadow = true;
     return ground;
 }
 
@@ -183,7 +243,10 @@ function createPlayer(color) {
         config.runner.depth
     );
     const material = new THREE.MeshLambertMaterial({ color });
-    return new THREE.Mesh(geometry, material);
+    const player = new THREE.Mesh(geometry, material);
+    player.castShadow = true;
+    player.receiveShadow = true;
+    return player;
 }
 
 function generateRandomObstaclePositions() {
@@ -235,7 +298,11 @@ function createObstacle() {
         config.obstacle.depth
     );
     const material = new THREE.MeshLambertMaterial({ color: 0xe67e22 });
-    return new THREE.Mesh(geometry, material);
+    const obstacle = new THREE.Mesh(geometry, material);
+    obstacle.castShadow = true;
+    obstacle.receiveShadow = true;
+    obstacle.userData.rotationSpeed = (Math.random() - 0.5) * 0.02;
+    return obstacle;
 }
 
 function createFinishLine(scene, x) {
@@ -243,7 +310,81 @@ function createFinishLine(scene, x) {
     const material = new THREE.MeshLambertMaterial({ color: 0xe74c3c });
     const finishLine = new THREE.Mesh(geometry, material);
     finishLine.position.set(0, 2.5, config.track.length);
+    finishLine.castShadow = true;
+    finishLine.receiveShadow = true;
     scene.add(finishLine);
+}
+
+function createBarriers(scene) {
+    const barrierHeight = 3;
+    const barrierThickness = 0.3;
+    const geometry = new THREE.BoxGeometry(barrierThickness, barrierHeight, config.track.length);
+    const material = new THREE.MeshLambertMaterial({ color: 0x34495e, transparent: true, opacity: 0.6 });
+    
+    // Left barrier
+    const leftBarrier = new THREE.Mesh(geometry, material);
+    leftBarrier.position.set(-config.track.width / 2, barrierHeight / 2, config.track.length / 2);
+    leftBarrier.castShadow = true;
+    leftBarrier.receiveShadow = true;
+    scene.add(leftBarrier);
+    
+    // Right barrier
+    const rightBarrier = new THREE.Mesh(geometry, material);
+    rightBarrier.position.set(config.track.width / 2, barrierHeight / 2, config.track.length / 2);
+    rightBarrier.castShadow = true;
+    rightBarrier.receiveShadow = true;
+    scene.add(rightBarrier);
+}
+
+// Sound effects using Web Audio API
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function playSound(frequency, duration, type = 'sine') {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = frequency;
+    oscillator.type = type;
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
+}
+
+function playSoundEffect(effect) {
+    switch(effect) {
+        case 'jump':
+            playSound(300, 0.1, 'sine');
+            break;
+        case 'landing':
+            playSound(150, 0.05, 'sine');
+            break;
+        case 'collision':
+            playSound(100, 0.2, 'sawtooth');
+            break;
+        case 'strafe':
+            playSound(200, 0.05, 'triangle');
+            break;
+        case 'accelerate':
+            playSound(250, 0.03, 'square');
+            break;
+        case 'winner':
+            playSound(440, 0.1, 'sine');
+            setTimeout(() => playSound(554, 0.1, 'sine'), 100);
+            setTimeout(() => playSound(659, 0.2, 'sine'), 200);
+            break;
+        case 'countdown':
+            playSound(600, 0.1, 'sine');
+            break;
+        case 'go':
+            playSound(800, 0.15, 'sine');
+            break;
+    }
 }
 
 // Get UI elements
@@ -315,6 +456,26 @@ function startGame() {
     game.player2.obstaclesHit = 0;
     game.player2.finished = false;
     game.player2.finishTime = null;
+    game.player1.cameraShake = 0;
+    game.player2.cameraShake = 0;
+    
+    // Start countdown
+    game.countdownActive = true;
+    game.countdown = 3;
+    game.isRunning = false; // Temporarily pause until countdown finishes
+    
+    const countdownInterval = setInterval(() => {
+        if (game.countdown > 0) {
+            playSoundEffect('countdown');
+            game.countdown--;
+        } else {
+            playSoundEffect('go');
+            game.countdownActive = false;
+            game.isRunning = true;
+            game.startTime = Date.now();
+            clearInterval(countdownInterval);
+        }
+    }, 1000);
     
     gameLoop();
 }
@@ -347,6 +508,7 @@ function acceleratePlayer(player) {
     const now = Date.now();
     const timeSinceLastMove = now - player.lastMoveTime;
     
+    playSoundEffect('accelerate');
     let accelerationMultiplier = 1;
     if (timeSinceLastMove < 250 && player.lastMoveTime > 0) {
         accelerationMultiplier = 2;
@@ -369,6 +531,7 @@ function strafePlayer(player, direction) {
     // Apply lane boundaries
     if (Math.abs(newTargetX) <= config.track.strafeLimit) {
         player.targetX = newTargetX;
+        playSoundEffect('strafe');
     }
 }
 
@@ -376,6 +539,7 @@ function jump(player) {
     if (!player.isJumping && player.y <= 0.01) {
         player.velocityY = config.runner.jumpStrength;
         player.isJumping = true;
+        playSoundEffect('jump');
     }
 }
 
@@ -415,8 +579,17 @@ function updatePlayer(player) {
     // Ground collision
     if (player.y <= 0) {
         player.y = 0;
+        if (player.velocityY < -0.1) {
+            playSoundEffect('landing');
+        }
         player.velocityY = 0;
         player.isJumping = false;
+    }
+    
+    // Reduce camera shake
+    if (player.cameraShake > 0) {
+        player.cameraShake *= 0.9;
+        if (player.cameraShake < 0.01) player.cameraShake = 0;
     }
     
     // Update mesh position
@@ -475,6 +648,15 @@ function checkObstacleCollision(player) {
                         player.pauseEndTime = (Date.now() / 1000) + config.pauseDuration;
                         player.hitObstacles.add(obstacle.index);
                         player.obstaclesHit++;
+                        player.cameraShake = 0.3;
+                        playSoundEffect('collision');
+                        
+                        // Flash obstacle red
+                        const originalColor = obstacle.mesh.material.color.getHex();
+                        obstacle.mesh.material.color.setHex(0xff0000);
+                        setTimeout(() => {
+                            obstacle.mesh.material.color.setHex(originalColor);
+                        }, 200);
                     }
                     break;
                 }
@@ -487,14 +669,40 @@ function update() {
     updatePlayer(game.player1);
     updatePlayer(game.player2);
     
-    // Update camera positions to follow players
-    camera1.position.x = game.player1.x;
+    // Update camera positions with smooth follow and shake
+    const shake1X = (Math.random() - 0.5) * game.player1.cameraShake;
+    const shake1Y = (Math.random() - 0.5) * game.player1.cameraShake;
+    camera1.position.x = game.player1.x + shake1X;
+    camera1.position.y = 3 + shake1Y;
     camera1.position.z = game.player1.z - 5;
     camera1.lookAt(game.player1.x, 1, game.player1.z + 10);
     
-    camera2.position.x = game.player2.x;
+    const shake2X = (Math.random() - 0.5) * game.player2.cameraShake;
+    const shake2Y = (Math.random() - 0.5) * game.player2.cameraShake;
+    camera2.position.x = game.player2.x + shake2X;
+    camera2.position.y = 3 + shake2Y;
     camera2.position.z = game.player2.z - 5;
     camera2.lookAt(game.player2.x, 1, game.player2.z + 10);
+    
+    // Update spotlight positions to follow players
+    if (scene1.userData.spotlight) {
+        scene1.userData.spotlight.position.set(game.player1.x, 10, game.player1.z + 5);
+        scene1.userData.spotlight.target.position.set(game.player1.x, 0, game.player1.z);
+        scene1.userData.spotlight.target.updateMatrixWorld();
+    }
+    if (scene2.userData.spotlight) {
+        scene2.userData.spotlight.position.set(game.player2.x, 10, game.player2.z + 5);
+        scene2.userData.spotlight.target.position.set(game.player2.x, 0, game.player2.z);
+        scene2.userData.spotlight.target.updateMatrixWorld();
+    }
+    
+    // Animate obstacles (rotation)
+    obstacles1.forEach(obs => {
+        obs.mesh.rotation.y += obs.mesh.userData.rotationSpeed;
+    });
+    obstacles2.forEach(obs => {
+        obs.mesh.rotation.y += obs.mesh.userData.rotationSpeed;
+    });
 }
 
 function render() {
@@ -522,28 +730,63 @@ function drawUI() {
     // Clear UI canvas
     uiCtx.clearRect(0, 0, uiCanvas.width, uiCanvas.height);
     
-    uiCtx.fillStyle = '#ecf0f1';
-    uiCtx.font = '20px Arial';
-    
-    if (game.isRunning) {
-        uiCtx.fillText(`Time: ${game.elapsedTime.toFixed(2)}s`, 500, 30);
-    } else if (game.lastRunTime !== null) {
-        uiCtx.fillText(`Last: ${game.lastRunTime.toFixed(2)}s`, 50, 30);
+    // Countdown display
+    if (game.countdownActive) {
+        uiCtx.fillStyle = '#f39c12';
+        uiCtx.font = 'bold 120px Arial';
+        uiCtx.textAlign = 'center';
+        if (game.countdown > 0) {
+            uiCtx.fillText(game.countdown, 600, 300);
+        } else {
+            uiCtx.fillStyle = '#2ecc71';
+            uiCtx.fillText('GO!', 600, 300);
+        }
+        uiCtx.textAlign = 'left';
+        return;
     }
     
+    // Player 1 HUD (left side)
+    uiCtx.fillStyle = '#3498db';
+    uiCtx.font = 'bold 24px Arial';
+    uiCtx.fillText('PLAYER 1', 20, 30);
+    
+    if (game.isRunning && !game.player1.finished) {
+        uiCtx.fillStyle = '#ecf0f1';
+        uiCtx.font = '20px Arial';
+        uiCtx.fillText(`Time: ${game.elapsedTime.toFixed(2)}s`, 20, 60);
+        uiCtx.fillText(`Speed: ${(game.player1.speed * 100).toFixed(0)}%`, 20, 85);
+        uiCtx.fillText(`Hits: ${game.player1.obstaclesHit}`, 20, 110);
+    }
+    
+    // Player 2 HUD (right side)
+    uiCtx.fillStyle = '#e74c3c';
+    uiCtx.font = 'bold 24px Arial';
+    uiCtx.fillText('PLAYER 2', 1020, 30);
+    
+    if (game.isRunning && !game.player2.finished) {
+        uiCtx.fillStyle = '#ecf0f1';
+        uiCtx.font = '20px Arial';
+        uiCtx.fillText(`Time: ${game.elapsedTime.toFixed(2)}s`, 1020, 60);
+        uiCtx.fillText(`Speed: ${(game.player2.speed * 100).toFixed(0)}%`, 1020, 85);
+        uiCtx.fillText(`Hits: ${game.player2.obstaclesHit}`, 1020, 110);
+    }
+    
+    // Personal best (center)
     if (game.personalBest !== null) {
-        uiCtx.fillText(`Best: ${game.personalBest.toFixed(2)}s`, 50, 60);
+        uiCtx.fillStyle = '#f39c12';
+        uiCtx.font = '18px Arial';
+        uiCtx.textAlign = 'center';
+        uiCtx.fillText(`Best: ${game.personalBest.toFixed(2)}s`, 600, 30);
+        uiCtx.textAlign = 'left';
     }
-    
-    // Player labels
-    uiCtx.fillText('P1', 50, 100);
-    uiCtx.fillText('P2', 650, 100);
 }
 
 function gameLoop() {
-    if (!game.isRunning) return;
+    if (!game.isRunning && !game.countdownActive) return;
     
-    game.elapsedTime = (Date.now() - game.startTime) / 1000;
+    if (game.isRunning) {
+        game.elapsedTime = (Date.now() - game.startTime) / 1000;
+    }
     
     update();
     render();
@@ -569,25 +812,31 @@ function endGame() {
     startButton.disabled = false;
     startButton.textContent = 'Start';
     
+    // Play winner sound
+    playSoundEffect('winner');
+    
     render();
     
     // Draw end game UI
     uiCtx.fillStyle = '#f39c12';
-    uiCtx.font = '40px Arial';
-    uiCtx.fillText(`Player ${game.winner} Wins!`, 450, 250);
+    uiCtx.font = 'bold 48px Arial';
+    uiCtx.textAlign = 'center';
+    uiCtx.fillText(`Player ${game.winner} Wins!`, 600, 250);
     
     uiCtx.fillStyle = '#3498db';
-    uiCtx.font = '24px Arial';
-    uiCtx.fillText(`P1: ${p1Time.toFixed(2)}s (${game.player1.obstaclesHit} hits)`, 420, 300);
+    uiCtx.font = '28px Arial';
+    uiCtx.fillText(`P1: ${p1Time.toFixed(2)}s (${game.player1.obstaclesHit} hits)`, 600, 300);
     
     uiCtx.fillStyle = '#e74c3c';
-    uiCtx.fillText(`P2: ${p2Time.toFixed(2)}s (${game.player2.obstaclesHit} hits)`, 420, 335);
+    uiCtx.fillText(`P2: ${p2Time.toFixed(2)}s (${game.player2.obstaclesHit} hits)`, 600, 340);
     
     if (isNewBest) {
         uiCtx.fillStyle = '#2ecc71';
-        uiCtx.font = '20px Arial';
-        uiCtx.fillText('NEW PERSONAL BEST!', 480, 370);
+        uiCtx.font = 'bold 24px Arial';
+        uiCtx.fillText('NEW PERSONAL BEST!', 600, 385);
     }
+    
+    uiCtx.textAlign = 'left';
 }
 
 // Initialize and start
