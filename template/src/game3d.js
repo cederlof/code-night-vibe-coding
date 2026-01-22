@@ -57,6 +57,7 @@ const game = {
         finished: false,
         finishTime: null,
         mesh: null,
+        ghostMesh: null,
         cameraShake: 0
     },
     player2: {
@@ -75,6 +76,7 @@ const game = {
         finished: false,
         finishTime: null,
         mesh: null,
+        ghostMesh: null,
         cameraShake: 0
     }
 };
@@ -158,9 +160,19 @@ function init3D() {
     game.player1.mesh.position.set(0, config.runner.height / 2, 0);
     scene1.add(game.player1.mesh);
     
+    // Create ghost of player 2 in player 1's scene
+    game.player2.ghostMesh = createGhostPlayer(0xe74c3c);
+    game.player2.ghostMesh.position.set(0, config.runner.height / 2, 0);
+    scene1.add(game.player2.ghostMesh);
+    
     game.player2.mesh = createPlayer(0xe74c3c);
     game.player2.mesh.position.set(0, config.runner.height / 2, 0);
     scene2.add(game.player2.mesh);
+    
+    // Create ghost of player 1 in player 2's scene
+    game.player1.ghostMesh = createGhostPlayer(0x3498db);
+    game.player1.ghostMesh.position.set(0, config.runner.height / 2, 0);
+    scene2.add(game.player1.ghostMesh);
     
     // Create obstacles
     createObstacles();
@@ -318,6 +330,56 @@ function createPlayer(color) {
     const visor = new THREE.Mesh(visorGeometry, visorMaterial);
     visor.position.y = 1.5;
     visor.castShadow = true;
+    group.add(visor);
+    
+    return group;
+}
+
+function createGhostPlayer(color) {
+    const group = new THREE.Group();
+    
+    // Body (cylinder) - transparent
+    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
+        roughness: 0.6,
+        metalness: 0.2,
+        transparent: true,
+        opacity: 0.3
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.6;
+    body.castShadow = false;
+    body.receiveShadow = false;
+    group.add(body);
+    
+    // Head - transparent
+    const headGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const headMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0xffdbac,
+        roughness: 0.8,
+        metalness: 0.0,
+        transparent: true,
+        opacity: 0.3
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    head.position.y = 1.5;
+    head.castShadow = false;
+    head.receiveShadow = false;
+    group.add(head);
+    
+    // Helmet/visor - transparent
+    const visorGeometry = new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const visorMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x2c3e50,
+        roughness: 0.2,
+        metalness: 0.8,
+        transparent: true,
+        opacity: 0.3
+    });
+    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
+    visor.position.y = 1.5;
+    visor.castShadow = false;
     group.add(visor);
     
     return group;
@@ -985,6 +1047,18 @@ function update() {
     obstacles2.forEach(obs => {
         obs.mesh.rotation.y += obs.mesh.userData.rotationSpeed;
     });
+    
+    // Update ghost player positions
+    if (game.player1.ghostMesh) {
+        game.player1.ghostMesh.position.x = game.player1.x;
+        game.player1.ghostMesh.position.z = game.player1.z;
+        game.player1.ghostMesh.position.y = game.player1.y + config.runner.height / 2;
+    }
+    if (game.player2.ghostMesh) {
+        game.player2.ghostMesh.position.x = game.player2.x;
+        game.player2.ghostMesh.position.z = game.player2.z;
+        game.player2.ghostMesh.position.y = game.player2.y + config.runner.height / 2;
+    }
 }
 
 function render() {
