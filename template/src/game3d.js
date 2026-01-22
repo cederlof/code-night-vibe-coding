@@ -15,7 +15,7 @@ const config = {
     },
     track: {
         width: 10,
-        length: 100,
+        length: 200,
         laneWidth: 5,
         strafeLimit: 2
     },
@@ -85,6 +85,7 @@ const game = {
 let scene1, scene2, camera1, camera2, renderer;
 let obstacles1 = [], obstacles2 = [];
 let ground1, ground2;
+let finishBanner1, finishBanner2;
 let uiCanvas, uiCtx;
 
 // Load personal best from local storage
@@ -178,8 +179,8 @@ function init3D() {
     createObstacles();
     
     // Create finish line
-    createFinishLine(scene1, 0);
-    createFinishLine(scene2, 0);
+    finishBanner1 = createFinishLine(scene1, 'FINISH');
+    finishBanner2 = createFinishLine(scene2, 'FINISH');
     
     // Create side barriers
     createBarriers(scene1);
@@ -294,43 +295,84 @@ function createGround() {
 function createPlayer(color) {
     const group = new THREE.Group();
     
-    // Body (cylinder)
-    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+    // Main body - sleek wedge shape
+    const bodyGeometry = new THREE.BoxGeometry(0.8, 0.4, 1.2);
     const bodyMaterial = new THREE.MeshStandardMaterial({ 
         color: color,
-        roughness: 0.6,
-        metalness: 0.2
+        roughness: 0.3,
+        metalness: 0.7
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.6;
+    body.position.y = 0.2;
     body.castShadow = true;
     body.receiveShadow = true;
     group.add(body);
     
-    // Head
-    const headGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const headMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffdbac,
-        roughness: 0.8,
-        metalness: 0.0
-    });
-    const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = 1.5;
-    head.castShadow = true;
-    head.receiveShadow = true;
-    group.add(head);
-    
-    // Helmet/visor
-    const visorGeometry = new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const visorMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2c3e50,
+    // Front nose cone
+    const noseGeometry = new THREE.ConeGeometry(0.4, 0.6, 8);
+    const noseMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
         roughness: 0.2,
-        metalness: 0.8
+        metalness: 0.8,
+        emissive: color,
+        emissiveIntensity: 0.2
     });
-    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
-    visor.position.y = 1.5;
-    visor.castShadow = true;
-    group.add(visor);
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 0.2, 0.9);
+    nose.castShadow = true;
+    group.add(nose);
+    
+    // Cockpit/windshield
+    const cockpitGeometry = new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a2e,
+        roughness: 0.1,
+        metalness: 0.9,
+        transparent: true,
+        opacity: 0.6
+    });
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.4, 0.2);
+    cockpit.castShadow = true;
+    group.add(cockpit);
+    
+    // Side wings/fins
+    const wingGeometry = new THREE.BoxGeometry(0.15, 0.3, 0.8);
+    const wingMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
+        roughness: 0.4,
+        metalness: 0.6
+    });
+    
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(-0.5, 0.15, 0);
+    leftWing.castShadow = true;
+    group.add(leftWing);
+    
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    rightWing.position.set(0.5, 0.15, 0);
+    rightWing.castShadow = true;
+    group.add(rightWing);
+    
+    // Rear engine glow
+    const engineGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 8);
+    const engineMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x00d4ff,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0x00d4ff,
+        emissiveIntensity: 0.8
+    });
+    const leftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    leftEngine.rotation.x = Math.PI / 2;
+    leftEngine.position.set(-0.3, 0.1, -0.7);
+    group.add(leftEngine);
+    
+    const rightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    rightEngine.rotation.x = Math.PI / 2;
+    rightEngine.position.set(0.3, 0.1, -0.7);
+    group.add(rightEngine);
     
     return group;
 }
@@ -338,49 +380,92 @@ function createPlayer(color) {
 function createGhostPlayer(color) {
     const group = new THREE.Group();
     
-    // Body (cylinder) - transparent
-    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 16);
+    // Main body - sleek wedge shape (transparent)
+    const bodyGeometry = new THREE.BoxGeometry(0.8, 0.4, 1.2);
     const bodyMaterial = new THREE.MeshStandardMaterial({ 
         color: color,
-        roughness: 0.6,
-        metalness: 0.2,
+        roughness: 0.3,
+        metalness: 0.7,
         transparent: true,
-        opacity: 0.3
+        opacity: 0.25
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 0.6;
+    body.position.y = 0.2;
     body.castShadow = false;
     body.receiveShadow = false;
     group.add(body);
     
-    // Head - transparent
-    const headGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const headMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0xffdbac,
-        roughness: 0.8,
-        metalness: 0.0,
-        transparent: true,
-        opacity: 0.3
-    });
-    const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = 1.5;
-    head.castShadow = false;
-    head.receiveShadow = false;
-    group.add(head);
-    
-    // Helmet/visor - transparent
-    const visorGeometry = new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
-    const visorMaterial = new THREE.MeshStandardMaterial({ 
-        color: 0x2c3e50,
+    // Front nose cone (transparent)
+    const noseGeometry = new THREE.ConeGeometry(0.4, 0.6, 8);
+    const noseMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
         roughness: 0.2,
         metalness: 0.8,
+        emissive: color,
+        emissiveIntensity: 0.2,
         transparent: true,
-        opacity: 0.3
+        opacity: 0.25
     });
-    const visor = new THREE.Mesh(visorGeometry, visorMaterial);
-    visor.position.y = 1.5;
-    visor.castShadow = false;
-    group.add(visor);
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.rotation.x = Math.PI / 2;
+    nose.position.set(0, 0.2, 0.9);
+    nose.castShadow = false;
+    group.add(nose);
+    
+    // Cockpit/windshield (transparent)
+    const cockpitGeometry = new THREE.SphereGeometry(0.35, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const cockpitMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a2e,
+        roughness: 0.1,
+        metalness: 0.9,
+        transparent: true,
+        opacity: 0.2
+    });
+    const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+    cockpit.position.set(0, 0.4, 0.2);
+    cockpit.castShadow = false;
+    group.add(cockpit);
+    
+    // Side wings/fins (transparent)
+    const wingGeometry = new THREE.BoxGeometry(0.15, 0.3, 0.8);
+    const wingMaterial = new THREE.MeshStandardMaterial({ 
+        color: color,
+        roughness: 0.4,
+        metalness: 0.6,
+        transparent: true,
+        opacity: 0.25
+    });
+    
+    const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    leftWing.position.set(-0.5, 0.15, 0);
+    leftWing.castShadow = false;
+    group.add(leftWing);
+    
+    const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+    rightWing.position.set(0.5, 0.15, 0);
+    rightWing.castShadow = false;
+    group.add(rightWing);
+    
+    // Rear engine glow (transparent)
+    const engineGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.3, 8);
+    const engineMaterial = new THREE.MeshStandardMaterial({ 
+        color: 0x00d4ff,
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: 0x00d4ff,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0.25
+    });
+    const leftEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    leftEngine.rotation.x = Math.PI / 2;
+    leftEngine.position.set(-0.3, 0.1, -0.7);
+    group.add(leftEngine);
+    
+    const rightEngine = new THREE.Mesh(engineGeometry, engineMaterial);
+    rightEngine.rotation.x = Math.PI / 2;
+    rightEngine.position.set(0.3, 0.1, -0.7);
+    group.add(rightEngine);
     
     return group;
 }
@@ -459,7 +544,7 @@ function createObstacle() {
     return obstacle;
 }
 
-function createFinishLine(scene, x) {
+function createFinishLine(scene, bannerText) {
     const group = new THREE.Group();
     
     // Create checkered finish line on ground
@@ -528,17 +613,32 @@ function createFinishLine(scene, x) {
     bar.receiveShadow = true;
     group.add(bar);
     
-    // Finish banner
+    // Finish banner with dynamic text
+    const banner = createBannerMesh(bannerText, archWidth);
+    banner.position.set(0, archHeight - 1.5, config.track.length);
+    banner.receiveShadow = true;
+    group.add(banner);
+    
+    scene.add(group);
+    return banner;
+}
+
+function createBannerMesh(text, archWidth) {
     const bannerCanvas = document.createElement('canvas');
     bannerCanvas.width = 512;
     bannerCanvas.height = 128;
     const bannerCtx = bannerCanvas.getContext('2d');
+    
+    // Flip canvas horizontally so text reads correctly
+    bannerCtx.translate(512, 0);
+    bannerCtx.scale(-1, 1);
+    
     bannerCtx.fillStyle = '#2c3e50';
     bannerCtx.fillRect(0, 0, 512, 128);
     bannerCtx.fillStyle = '#ffffff';
     bannerCtx.font = 'bold 60px Arial';
     bannerCtx.textAlign = 'center';
-    bannerCtx.fillText('FINISH', 256, 80);
+    bannerCtx.fillText(text, 256, 80);
     
     const bannerTexture = new THREE.CanvasTexture(bannerCanvas);
     const bannerGeometry = new THREE.PlaneGeometry(archWidth - 2, 1.2);
@@ -549,11 +649,26 @@ function createFinishLine(scene, x) {
         side: THREE.DoubleSide
     });
     const banner = new THREE.Mesh(bannerGeometry, bannerMaterial);
-    banner.position.set(0, archHeight - 1.5, config.track.length);
-    banner.receiveShadow = true;
-    group.add(banner);
+    banner.userData.canvas = bannerCanvas;
+    banner.userData.context = bannerCtx;
+    return banner;
+}
+
+function updateBannerText(banner, text) {
+    const ctx = banner.userData.context;
+    const canvas = banner.userData.canvas;
     
-    scene.add(group);
+    // Clear and redraw
+    ctx.clearRect(0, 0, 512, 128);
+    ctx.fillStyle = '#2c3e50';
+    ctx.fillRect(0, 0, 512, 128);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 60px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(text, 256, 80);
+    
+    // Update texture
+    banner.material.map.needsUpdate = true;
 }
 
 function createBarriers(scene) {
@@ -682,6 +797,95 @@ function createTree() {
 
 // Sound effects using Web Audio API
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let bgMusicOscillators = [];
+let bgMusicGain = null;
+
+function startBackgroundMusic() {
+    stopBackgroundMusic();
+    
+    // Create gain node for volume control
+    bgMusicGain = audioContext.createGain();
+    bgMusicGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+    bgMusicGain.connect(audioContext.destination);
+    
+    // Bass line pattern (repeating notes)
+    const bassNotes = [110, 110, 165, 165, 147, 147, 131, 196];
+    const bassInterval = 0.4;
+    
+    function playBassNote(index) {
+        if (!bgMusicGain) return;
+        
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'sawtooth';
+        osc.frequency.value = bassNotes[index % bassNotes.length];
+        
+        osc.connect(gain);
+        gain.connect(bgMusicGain);
+        
+        gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + bassInterval);
+        
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + bassInterval);
+        
+        setTimeout(() => playBassNote(index + 1), bassInterval * 1000);
+    }
+    
+    // Melody line (higher pitched)
+    const melodyNotes = [440, 494, 523, 587, 523, 494, 440, 392];
+    const melodyInterval = 0.2;
+    
+    function playMelodyNote(index) {
+        if (!bgMusicGain) return;
+        
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'square';
+        osc.frequency.value = melodyNotes[index % melodyNotes.length];
+        
+        osc.connect(gain);
+        gain.connect(bgMusicGain);
+        
+        gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + melodyInterval);
+        
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + melodyInterval);
+        
+        setTimeout(() => playMelodyNote(index + 1), melodyInterval * 1000);
+    }
+    
+    // Pad/atmosphere
+    const padFreq = 220;
+    const pad = audioContext.createOscillator();
+    const padGain = audioContext.createGain();
+    
+    pad.type = 'sine';
+    pad.frequency.value = padFreq;
+    pad.connect(padGain);
+    padGain.connect(bgMusicGain);
+    padGain.gain.setValueAtTime(0.05, audioContext.currentTime);
+    
+    pad.start();
+    bgMusicOscillators.push(pad);
+    
+    // Start the patterns
+    playBassNote(0);
+    setTimeout(() => playMelodyNote(0), 100);
+}
+
+function stopBackgroundMusic() {
+    bgMusicOscillators.forEach(osc => {
+        try {
+            osc.stop();
+        } catch(e) {}
+    });
+    bgMusicOscillators = [];
+    bgMusicGain = null;
+}
 
 function playSound(frequency, duration, type = 'sine') {
     const oscillator = audioContext.createOscillator();
@@ -764,6 +968,10 @@ function startGame() {
     // Generate new random obstacle course
     createObstacles();
     
+    // Reset finish banners
+    updateBannerText(finishBanner1, 'FINISH');
+    updateBannerText(finishBanner2, 'FINISH');
+    
     // Reset timer and counters
     game.startTime = Date.now();
     game.elapsedTime = 0;
@@ -817,6 +1025,7 @@ function startGame() {
             game.countdownActive = false;
             game.isRunning = true;
             game.startTime = Date.now();
+            startBackgroundMusic();
             clearInterval(countdownInterval);
         }
     }, 1000);
@@ -1152,6 +1361,7 @@ function gameLoop() {
 
 function endGame() {
     game.isRunning = false;
+    stopBackgroundMusic();
     
     const p1Time = game.player1.finishTime;
     const p2Time = game.player2.finishTime;
@@ -1167,6 +1377,10 @@ function endGame() {
     
     startButton.disabled = false;
     startButton.textContent = 'Start';
+    
+    // Update finish banners to show winner
+    updateBannerText(finishBanner1, `P${game.winner} WINS!`);
+    updateBannerText(finishBanner2, `P${game.winner} WINS!`);
     
     // Play winner sound
     playSoundEffect('winner');
