@@ -24,6 +24,10 @@ body {
     margin: 0 auto 20px;
 }
 
+#gameCanvas canvas {
+    display: block;
+}
+
 #game-container > div:first-of-type {
     display: flex;
     gap: 10px;

@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Obstacle Runner</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
+        <div id="gameCanvas"></div>
         <div>
             <button id="startButton">Start</button>
             <button id="clearBestButton">Clear Best</button>
         </div>
         <div id="instructions">P1: W=jump D=move | P2: Numpad8=jump Numpad6=move | Press R to restart</div>
     </div>
-    <script src="game.js"></script>
+    <script src="game3d.js"></script>
 </body>
 </html>
