@@ -163,15 +163,44 @@
 ---
 
 ## M9: Visual & Audio Polish
-**Goal**: Smooth and satisfying feel
+**Goal**: Enhanced 3D visuals and satisfying feel
 
-- Smooth running animation (minimal but fluid)
-- Jump animation
-- Sound effect: jump
-- Sound effect: obstacle hit
-- Visual feedback when hitting obstacle
+- 3D Model improvements:
+  - Replace box geometry with proper 3D runner models
+  - Add character animations (running, jumping, strafing)
+  - Animated obstacle models (rotating, pulsing, or moving parts)
+- Enhanced lighting and shadows:
+  - Dynamic shadows for players and obstacles
+  - Spotlight following each player
+  - Better ambient and directional lighting
+- Visual effects:
+  - Particle effects on jump landing
+  - Impact effect when hitting obstacles
+  - Speed lines or motion blur at high speeds
+  - Trail effect behind runners
+- Track improvements:
+  - Textured ground with track markings
+  - Side barriers/walls for visual depth
+  - Background environment (sky, distant scenery)
+  - Track surface with perspective grid
+- Camera enhancements:
+  - Smooth camera follow with easing
+  - Slight camera shake on collision
+  - Dynamic FOV based on speed
+- Audio:
+  - Sound effect: jump
+  - Sound effect: landing
+  - Sound effect: obstacle collision
+  - Sound effect: strafe movement
+  - Sound effect: acceleration
+  - Background music (optional toggle)
+  - Winner fanfare sound
+- UI Polish:
+  - Better positioned HUD elements
+  - Color-coded player indicators
+  - Animated countdown at race start (3, 2, 1, GO!)
 
-**Playable**: Feels good to play
+**Playable**: Feels good to play with immersive 3D experience
 
 ---
 
