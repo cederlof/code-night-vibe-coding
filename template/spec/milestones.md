@@ -89,7 +89,33 @@
 
 ---
 
-## M6: Visual & Audio Polish
+## M6: 3D Perspective Transformation
+**Goal**: Transform to 3D forward-moving perspective
+
+- Change from 2D side-scrolling to 3D perspective view
+- Movement goes forward (into the screen) instead of sideways
+- Obstacles come toward the player from distance
+- Player figure visible from behind (runner seen from back)
+- Split-screen layout:
+  - Player 1 viewport on left half of canvas
+  - Player 2 viewport on right half of canvas
+  - Each player has independent perspective view
+- Controls remain same (W/D for P1, Numpad8/6 for P2)
+- W key moves player forward in their lane
+- D key (P1) and Numpad 6 (P2) become strafe/lane change (optional)
+- 3D rendering:
+  - Ground plane with perspective
+  - Obstacles scale larger as they approach
+  - Distance/depth perception
+  - Horizon line
+- Course length measured in depth (distance forward)
+- Finish line at end of track depth
+
+**Playable**: Race in 3D perspective view
+
+---
+
+## M7: Visual & Audio Polish
 **Goal**: Smooth and satisfying feel
 
 - Smooth running animation (minimal but fluid)
@@ -99,3 +125,14 @@
 - Visual feedback when hitting obstacle
 
 **Playable**: Feels good to play
+
+---
+
+## M8: Leaderboard
+**Goal**: Competition with others
+
+- Leaderboard displays top times
+- Player can submit their time to leaderboard
+- Leaderboard shows player's rank
+
+**Playable**: Full version 1 experience
